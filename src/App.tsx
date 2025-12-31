@@ -5,13 +5,20 @@ import { AcceptanceModal } from './components/AcceptanceModal'
 import { CapabilityMarketplace } from './components/CapabilityMarketplace'
 import { SecretsVault } from './components/SecretsVault'
 import { BillingDashboard } from './components/BillingDashboard'
-import { Shield, Zap } from 'lucide-react'
+import { CreateSandboxModal } from './components/CreateSandboxModal'
+import { Shield, Zap, Box, Server, Clock, CheckCircle2, Globe } from 'lucide-react'
+import { mockSandboxes } from './data/sandboxes'
+import type { Sandbox } from './data/sandboxes'
+import { cn } from './lib/utils'
+import { Button } from './components/ui/Button'
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [isAcceptanceOpen, setIsAcceptanceOpen] = useState(false)
   const [isKilled, setIsKilled] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [activeSandbox, setActiveSandbox] = useState<Sandbox>(mockSandboxes[0])
 
   const handleAccept = () => {
     setIsUnlocked(true)
@@ -22,12 +29,21 @@ function App() {
     setIsKilled(true)
   }
 
+  const handleCreateSandbox = (name: string, region: string) => {
+    console.log("Creating sandbox:", name, region)
+    setIsCreateModalOpen(false)
+    // In a real app we'd add it to the list and select it
+  }
+
   return (
     <Layout 
       activeTab={activeTab} 
       onTabChange={setActiveTab} 
       onKill={handleKill}
       isKilled={isKilled}
+      activeSandbox={activeSandbox}
+      onSelectSandbox={setActiveSandbox}
+      onCreateSandbox={() => setIsCreateModalOpen(true)}
     >
       <div className="space-y-8">
         {activeTab === 'dashboard' && (
@@ -35,17 +51,25 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl col-span-2 relative overflow-hidden">
                 <div className="relative z-10">
-                  <h1 className="text-4xl font-black tracking-tighter uppercase mb-2">Welcome Back</h1>
-                  <p className="text-muted-foreground">Your Sandbox Box has been running for 4 days and 12 hours.</p>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-4xl font-black tracking-tighter uppercase">{activeSandbox.name}</h1>
+                    <div className={cn(
+                      "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border",
+                      activeSandbox.status === 'online' ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-white/5 border-white/10 text-muted-foreground"
+                    )}>
+                      {activeSandbox.status}
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">Running in {activeSandbox.region}. Active for {activeSandbox.uptime || '0m'}.</p>
                   
                   <div className="mt-8 flex gap-4">
                     <div className="flex-1 p-4 rounded-2xl bg-white/5 border border-white/5">
                       <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Tasks Completed</div>
-                      <div className="text-2xl font-black">128</div>
+                      <div className="text-2xl font-black">{activeSandbox.tasksCompleted}</div>
                     </div>
                     <div className="flex-1 p-4 rounded-2xl bg-white/5 border border-white/5">
                       <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Active Memory</div>
-                      <div className="text-2xl font-black">2.4 GB</div>
+                      <div className="text-2xl font-black">{activeSandbox.memoryUsage}</div>
                     </div>
                   </div>
 
@@ -122,9 +146,60 @@ function App() {
         )}
 
         {activeTab === 'settings' && (
-          <div className="p-12 rounded-[3rem] border border-white/5 bg-white/5 backdrop-blur-xl text-center">
-            <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">Under Construction</h1>
-            <p className="text-muted-foreground">The {activeTab} panel will be available in the next release.</p>
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h2 className="text-3xl font-black uppercase tracking-tighter">Box Settings</h2>
+                <p className="text-muted-foreground">Manage your agent instances and environment configuration.</p>
+              </div>
+              <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2">
+                <Box className="w-4 h-4" />
+                Create New Box
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {mockSandboxes.map((sb) => (
+                <div key={sb.id} className="p-6 rounded-3xl border border-white/5 bg-white/5 flex items-center justify-between group hover:bg-white/10 transition-all">
+                  <div className="flex items-center gap-6">
+                    <div className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center",
+                      sb.status === 'online' ? "bg-green-500/10 text-green-500" : "bg-white/5 text-muted-foreground"
+                    )}>
+                      <Server className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black uppercase tracking-tight">{sb.name}</h3>
+                      <div className="flex items-center gap-4 mt-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          <Globe className="w-3 h-3" />
+                          {sb.region}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          <Clock className="w-3 h-3" />
+                          {sb.uptime}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="text-right mr-4">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usage</div>
+                      <div className="text-sm font-bold text-primary">£2.10 this month</div>
+                    </div>
+                    {activeSandbox.id === sb.id ? (
+                      <div className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Active
+                      </div>
+                    ) : (
+                      <Button variant="secondary" size="sm" onClick={() => setActiveSandbox(sb)}>Select</Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -133,6 +208,12 @@ function App() {
         isOpen={isAcceptanceOpen}
         onClose={() => setIsAcceptanceOpen(false)}
         onAccept={handleAccept}
+      />
+
+      <CreateSandboxModal 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={handleCreateSandbox}
       />
     </Layout>
   )

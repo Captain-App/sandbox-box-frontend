@@ -1,9 +1,11 @@
 import React, { useState } from "react"
 import { Sidebar } from "./Sidebar"
 import { AuditBadge } from "./AuditBadge"
-import { Power } from "lucide-react"
+import { Power, Box } from "lucide-react"
 import { Button } from "./ui/Button"
 import { cn } from "../lib/utils"
+import { SandboxSelector } from "./SandboxSelector"
+import type { Sandbox } from "../data/sandboxes"
 
 interface LayoutProps {
   children: React.ReactNode
@@ -11,9 +13,21 @@ interface LayoutProps {
   onTabChange: (id: string) => void
   onKill: () => void
   isKilled: boolean
+  activeSandbox: Sandbox
+  onSelectSandbox: (sandbox: Sandbox) => void
+  onCreateSandbox: () => void
 }
 
-export function Layout({ children, activeTab, onTabChange, onKill, isKilled }: LayoutProps) {
+export function Layout({ 
+  children, 
+  activeTab, 
+  onTabChange, 
+  onKill, 
+  isKilled,
+  activeSandbox,
+  onSelectSandbox,
+  onCreateSandbox
+}: LayoutProps) {
   return (
     <div className={cn(
       "flex h-screen text-foreground overflow-hidden transition-colors duration-1000",
@@ -23,9 +37,15 @@ export function Layout({ children, activeTab, onTabChange, onKill, isKilled }: L
       
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-background/50 backdrop-blur-xl z-20">
-          <div className="flex items-center gap-4">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+        <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-background/50 backdrop-blur-xl z-20">
+          <div className="flex items-center gap-6">
+            <SandboxSelector 
+              activeSandbox={activeSandbox} 
+              onSelect={onSelectSandbox} 
+              onCreateNew={onCreateSandbox} 
+            />
+            <div className="h-8 w-px bg-white/10" />
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
               {activeTab}
             </h2>
           </div>
