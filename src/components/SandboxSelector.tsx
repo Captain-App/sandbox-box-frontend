@@ -1,16 +1,16 @@
 import { ChevronDown, Plus, Box, Check } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
-import type { Sandbox } from "../data/sandboxes"
-import { mockSandboxes } from "../data/sandboxes"
+import type { Sandbox } from "../lib/api"
 import { cn } from "../lib/utils"
 
 interface SandboxSelectorProps {
   activeSandbox: Sandbox
+  sandboxes: Sandbox[]
   onSelect: (sandbox: Sandbox) => void
   onCreateNew: () => void
 }
 
-export function SandboxSelector({ activeSandbox, onSelect, onCreateNew }: SandboxSelectorProps) {
+export function SandboxSelector({ activeSandbox, sandboxes, onSelect, onCreateNew }: SandboxSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -35,7 +35,7 @@ export function SandboxSelector({ activeSandbox, onSelect, onCreateNew }: Sandbo
         </div>
         <div className="text-left">
           <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground leading-none mb-1">Active Box</div>
-          <div className="text-sm font-bold leading-none">{activeSandbox.name}</div>
+          <div className="text-sm font-bold leading-none">{activeSandbox.title || activeSandbox.id}</div>
         </div>
         <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform ml-2", isOpen && "rotate-180")} />
       </button>
@@ -43,7 +43,7 @@ export function SandboxSelector({ activeSandbox, onSelect, onCreateNew }: Sandbo
       {isOpen && (
         <div className="absolute top-full left-0 mt-2 w-72 p-2 rounded-2xl bg-slate-950 border border-white/10 shadow-2xl z-[60] animate-in fade-in slide-in-from-top-2">
           <div className="space-y-1">
-            {mockSandboxes.map((sb) => (
+            {sandboxes.map((sb) => (
               <button
                 key={sb.id}
                 onClick={() => {
@@ -60,11 +60,11 @@ export function SandboxSelector({ activeSandbox, onSelect, onCreateNew }: Sandbo
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-2 h-2 rounded-full",
-                    sb.status === 'online' ? "bg-green-500" : "bg-white/20"
+                    sb.status === 'active' ? "bg-green-500" : "bg-white/20"
                   )} />
                   <div className="text-left">
-                    <div className="text-sm font-bold">{sb.name}</div>
-                    <div className="text-[10px] uppercase tracking-wider opacity-60">{sb.region}</div>
+                    <div className="text-sm font-bold">{sb.title || sb.id}</div>
+                    <div className="text-[10px] uppercase tracking-wider opacity-60">Box</div>
                   </div>
                 </div>
                 {activeSandbox.id === sb.id && <Check className="w-4 h-4" />}
@@ -89,4 +89,3 @@ export function SandboxSelector({ activeSandbox, onSelect, onCreateNew }: Sandbo
     </div>
   )
 }
-

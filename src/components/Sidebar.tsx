@@ -5,9 +5,11 @@ import {
   Key, 
   CreditCard, 
   Settings,
-  Zap
+  Zap,
+  LogOut
 } from "lucide-react"
 import { cn } from "../lib/utils"
+import { useAuth } from "../contexts/AuthContext"
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -24,6 +26,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+  const { signOut } = useAuth()
+
   return (
     <div className="w-64 border-r border-white/5 bg-background flex flex-col">
       <div className="p-6 flex items-center gap-3">
@@ -31,7 +35,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           <Zap className="w-5 h-5 text-primary-foreground" />
         </div>
         <span className="text-xl font-black tracking-tighter uppercase">
-          Sandbox Box
+          Cloud Box
         </span>
       </div>
 
@@ -53,7 +57,15 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="p-4 mt-auto">
+      <div className="p-4 space-y-4">
+        <button
+          onClick={() => signOut()}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-500/10 transition-all mt-auto"
+        >
+          <LogOut className="w-5 h-5" />
+          Sign Out
+        </button>
+
         <div className="p-4 rounded-2xl bg-slate-900/50 border border-white/5 space-y-3">
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             <span>Credits</span>
@@ -67,4 +79,3 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     </div>
   )
 }
-

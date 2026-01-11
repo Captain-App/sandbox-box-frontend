@@ -6,7 +6,7 @@ import { cn } from "../lib/utils"
 interface CreateSandboxModalProps {
   isOpen: boolean
   onClose: () => void
-  onCreate: (name: string, region: string) => void
+  onCreate: (name: string, region: string, repository?: string) => void
 }
 
 const regions = [
@@ -95,7 +95,7 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
             <Button 
               className="w-full py-6 text-lg uppercase tracking-widest gap-3"
               disabled={!name}
-              onClick={() => onCreate(name, selectedRegion)}
+              onClick={() => onCreate(name, selectedRegion, repo)}
             >
               <Zap className="w-5 h-5" />
               Initialise Sandbox
@@ -109,4 +109,6 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
     </div>
   )
 }
+
+
 

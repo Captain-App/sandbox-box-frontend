@@ -99,3 +99,5 @@ export function AcceptanceModal({ isOpen, onClose, onAccept }: AcceptanceModalPr
   )
 }
 
+
+

@@ -1,0 +1,29 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "shipbox-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-09",
+  "routes": [
+    { "pattern": "api.shipbox.dev", "zone_name": "shipbox.dev" }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "shipbox-db",
+      "database_id": "15d090d5-e4a9-4cfe-93c1-ce731ab0f43a"
+    }
+  ],
+  "services": [
+    {
+      "binding": "SANDBOX_MCP",
+      "service": "shipbox-engine"
+    }
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://app.captainapp.co.uk",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqYmNqa2loeHNrdXd3ZmRxa2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3MDU2OTAsImV4cCI6MjA2NjI4MTY5MH0.V9e7XsuTlTOLqefOIedTqlBiTxUSn4O5FZSPWwAxiSI"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

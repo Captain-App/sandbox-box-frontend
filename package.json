@@ -1,5 +1,5 @@
 {
-  "name": "cloud-box-castle",
+  "name": "shipbox-dev",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.90.1",
+    "@tanstack/react-query": "^5.90.16",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.562.0",

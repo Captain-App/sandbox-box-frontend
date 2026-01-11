@@ -1,11 +1,11 @@
-import React, { useState } from "react"
+import React from "react"
 import { Sidebar } from "./Sidebar"
 import { AuditBadge } from "./AuditBadge"
-import { Power, Box } from "lucide-react"
+import { Power } from "lucide-react"
 import { Button } from "./ui/Button"
 import { cn } from "../lib/utils"
 import { SandboxSelector } from "./SandboxSelector"
-import type { Sandbox } from "../data/sandboxes"
+import type { Sandbox } from "../lib/api"
 
 interface LayoutProps {
   children: React.ReactNode
@@ -13,7 +13,8 @@ interface LayoutProps {
   onTabChange: (id: string) => void
   onKill: () => void
   isKilled: boolean
-  activeSandbox: Sandbox
+  activeSandbox: Sandbox | null
+  sandboxes: Sandbox[]
   onSelectSandbox: (sandbox: Sandbox) => void
   onCreateSandbox: () => void
 }
@@ -25,6 +26,7 @@ export function Layout({
   onKill, 
   isKilled,
   activeSandbox,
+  sandboxes,
   onSelectSandbox,
   onCreateSandbox
 }: LayoutProps) {
@@ -39,11 +41,14 @@ export function Layout({
         {/* Header */}
         <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-background/50 backdrop-blur-xl z-20">
           <div className="flex items-center gap-6">
-            <SandboxSelector 
-              activeSandbox={activeSandbox} 
-              onSelect={onSelectSandbox} 
-              onCreateNew={onCreateSandbox} 
-            />
+            {activeSandbox && (
+              <SandboxSelector 
+                activeSandbox={activeSandbox} 
+                sandboxes={sandboxes}
+                onSelect={onSelectSandbox} 
+                onCreateNew={onCreateSandbox} 
+              />
+            )}
             <div className="h-8 w-px bg-white/10" />
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
               {activeTab}
@@ -103,4 +108,3 @@ export function Layout({
     </div>
   )
 }
-
