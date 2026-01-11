@@ -2,7 +2,6 @@ import {
   LayoutDashboard, 
   Terminal, 
   Box,
-  Key, 
   CreditCard, 
   Settings as SettingsIcon,
   Zap,
