@@ -23,8 +23,8 @@ jobs:
           npm ci
           echo "${{ secrets.PROXY_JWT_SECRET }}" | npx wrangler secret put PROXY_JWT_SECRET
           echo "${{ secrets.ANTHROPIC_API_KEY }}" | npx wrangler secret put ANTHROPIC_API_KEY
-          echo "${{ secrets.GITHUB_APP_ID }}" | npx wrangler secret put GITHUB_APP_ID
-          echo "${{ secrets.GITHUB_APP_PRIVATE_KEY }}" | npx wrangler secret put GITHUB_APP_PRIVATE_KEY
+          echo "${{ secrets.GH_APP_ID }}" | npx wrangler secret put GITHUB_APP_ID
+          echo "${{ secrets.GH_APP_PRIVATE_KEY }}" | npx wrangler secret put GITHUB_APP_PRIVATE_KEY
           echo "${{ secrets.SENTRY_DSN }}" | npx wrangler secret put SENTRY_DSN
           npx wrangler deploy
         env:
@@ -37,6 +37,8 @@ jobs:
         run: |
           npm ci
           echo "${{ secrets.PROXY_JWT_SECRET }}" | npx wrangler secret put PROXY_JWT_SECRET
+          echo "${{ secrets.GH_APP_ID }}" | npx wrangler secret put GITHUB_APP_ID
+          echo "${{ secrets.GH_APP_PRIVATE_KEY }}" | npx wrangler secret put GITHUB_APP_PRIVATE_KEY
           echo "${{ secrets.SENTRY_DSN }}" | npx wrangler secret put SENTRY_DSN
           npx wrangler deploy
         env:
