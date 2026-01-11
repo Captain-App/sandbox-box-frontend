@@ -21,6 +21,10 @@ export function createMockD1() {
               results = results.filter((r) => r.user_id === userId);
             }
 
+            if (query.includes("SELECT count(*)")) {
+              return { results: [{ count: results.length }] };
+            }
+
             // Simple ORDER BY handling
             if (query.includes("ORDER BY created_at DESC")) {
               results = [...results].sort((a, b) => b.created_at - a.created_at);

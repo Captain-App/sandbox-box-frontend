@@ -4,19 +4,19 @@ import { createMockD1 } from "../test-utils/d1-mock";
 import { createMockSandboxMcp } from "../test-utils/fetcher-mock";
 
 describe("Sessions Routes", () => {
-  const mockD1 = createMockD1();
-  const mockSandboxMcp = createMockSandboxMcp();
-  const env = {
-    DB: mockD1,
-    SANDBOX_MCP: mockSandboxMcp,
-    SUPABASE_URL: "https://supabase",
-    SUPABASE_ANON_KEY: "anon-key",
-  };
+  let mockD1: ReturnType<typeof createMockD1>;
+  let mockSandboxMcp: ReturnType<typeof createMockSandboxMcp>;
+  let env: any;
 
   beforeEach(() => {
-    // Clear mocks
-    mockD1._store.set("user_sessions", []);
-    mockSandboxMcp._sessions.clear();
+    mockD1 = createMockD1();
+    mockSandboxMcp = createMockSandboxMcp();
+    env = {
+      DB: mockD1,
+      SANDBOX_MCP: mockSandboxMcp,
+      SUPABASE_URL: "https://supabase",
+      SUPABASE_ANON_KEY: "anon-key",
+    };
     
     // Mock global fetch for Supabase auth
     vi.stubGlobal("fetch", async (url: string) => {
