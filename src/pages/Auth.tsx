@@ -40,7 +40,7 @@ export function AuthPage() {
             <Box className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-black uppercase tracking-tighter text-white">
-            Cloud Box Castle
+            Shipbox
           </h1>
           <p className="text-muted-foreground text-sm mt-2">
             {mode === 'login' ? 'Welcome back, Architect' : 'Join the construction'}
