@@ -63,11 +63,55 @@ app.post("/internal/report-usage", async (c) => {
 });
 
 app.use("/sessions/*", async (c, next) => {
-  // ... existing auth ...
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const token = authHeader.split(" ")[1];
+  const res = await fetch(`${c.env.SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "apikey": c.env.SUPABASE_ANON_KEY,
+    }
+  });
+
+  if (!res.ok) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const user = await res.json() as { id: string };
+  c.set("user", { id: user.id });
+  await next();
 });
 
 app.use("/github/*", async (c, next) => {
-  // ... existing github auth ...
+  // Skip auth for webhooks
+  if (c.req.path === "/github/webhook") {
+    await next();
+    return;
+  }
+  
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const token = authHeader.split(" ")[1];
+  const res = await fetch(`${c.env.SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "apikey": c.env.SUPABASE_ANON_KEY,
+    }
+  });
+
+  if (!res.ok) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const user = await res.json() as { id: string };
+  c.set("user", { id: user.id });
+  await next();
 });
 
 app.use("/settings/*", async (c, next) => {

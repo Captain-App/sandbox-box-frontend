@@ -13,6 +13,7 @@ export default defineConfig({
       '**/dist/**',
       '**/workers/**',
       '**/e2e/**',
+      '**/sandbox-mcp/**',
       '**/.{idea,git,cache,output,temp}/**',
     ],
   },

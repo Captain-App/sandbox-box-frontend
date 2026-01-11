@@ -2,6 +2,13 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { CreateSandboxModal } from './CreateSandboxModal'
 
+// Mock the api module
+vi.mock('../lib/api', () => ({
+  api: {
+    getGitHubRepos: vi.fn().mockResolvedValue([]),
+  },
+}))
+
 describe('CreateSandboxModal', () => {
   it('renders correctly when open', () => {
     render(
