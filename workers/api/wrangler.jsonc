@@ -3,6 +3,10 @@
   "name": "shipbox-api",
   "main": "src/index.ts",
   "compatibility_date": "2025-01-09",
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "api.shipbox.dev/*", "zone_name": "shipbox.dev" }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
