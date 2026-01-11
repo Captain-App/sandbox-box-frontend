@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { Effect, Schema } from "effect";
+import { Effect, Schema, Exit } from "effect";
 import { SessionService, makeSessionServiceLayer } from "../services/session";
 import { CreateSessionInput } from "../models/session";
 import { QuotaService, makeQuotaServiceLayer } from "../services/quota";
@@ -45,7 +45,7 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     
     // Validate input
     const decodeResult = Effect.runSyncExit(Schema.decodeUnknown(CreateSessionInput)(body));
-    if (Effect.Exit.isFailure(decodeResult)) {
+    if (Exit.isFailure(decodeResult)) {
       return c.json({ error: "Invalid input" }, 400);
     }
     const input = decodeResult.value;
@@ -58,7 +58,7 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
 
     // Check quota first
     const quotaResult = await Effect.runPromiseExit(quotaService.checkSandboxQuota(user.id));
-    if (Effect.Exit.isFailure(quotaResult)) {
+    if (Exit.isFailure(quotaResult)) {
       return c.json({ error: (quotaResult.cause as any).defect?.message || "Quota exceeded" }, 403);
     }
 

@@ -38,16 +38,30 @@ export function createMockD1() {
               return results.find((r) => r.user_id === userId && r.session_id === sessionId) || null;
             }
 
+            if (query.includes("WHERE user_id = ?")) {
+              const userId = args[0];
+              return results.find((r) => r.user_id === userId) || null;
+            }
+
             return results[0] || null;
           },
 
           run: async () => {
             if (query.toUpperCase().startsWith("INSERT")) {
               const tableName = query.match(/INSERT\s+INTO\s+(\w+)/i)?.[1];
-              if (tableName === "user_sessions") {
-                const [userId, sessionId, createdAt] = args;
+              if (tableName) {
                 const current = store.get(tableName) || [];
-                store.set(tableName, [...current, { user_id: userId, session_id: sessionId, created_at: createdAt }]);
+                if (tableName === "user_sessions") {
+                  const [userId, sessionId, createdAt] = args;
+                  store.set(tableName, [...current, { user_id: userId, session_id: sessionId, created_at: createdAt }]);
+                } else if (tableName === "user_balances") {
+                  const [userId, balanceCredits, updatedAt] = args;
+                  const filtered = current.filter(r => r.user_id !== userId);
+                  store.set(tableName, [...filtered, { user_id: userId, balance_credits: balanceCredits, updated_at: updatedAt }]);
+                } else if (tableName === "transactions") {
+                  const [id, userId, amount, type, description, createdAt, metadata] = args;
+                  store.set(tableName, [...current, { id, user_id: userId, amount_credits: amount, type, description, created_at: createdAt, metadata }]);
+                }
               }
             } else if (query.toUpperCase().startsWith("DELETE")) {
               const tableName = query.match(/FROM\s+(\w+)/i)?.[1];

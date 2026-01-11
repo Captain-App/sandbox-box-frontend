@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { Effect } from "effect";
+import { Effect, Exit } from "effect";
 import { withSentry } from "@sentry/cloudflare";
 import { sessionsRoutes } from "./routes/sessions";
 import { makeBillingServiceLayer, BillingService } from "./services/billing";
@@ -46,7 +46,7 @@ app.post("/internal/report-usage", async (c) => {
     }).pipe(Effect.provide(makeBillingServiceLayer(c.env.DB)))
   );
 
-  if (Effect.Exit.isFailure(result)) {
+  if (Exit.isFailure(result)) {
     return c.json({ error: "Failed to report usage" }, 500);
   }
 
@@ -111,48 +111,11 @@ app.get("/billing/balance", async (c) => {
     }).pipe(Effect.provide(makeBillingServiceLayer(c.env.DB)))
   );
 
-  if (Effect.Exit.isFailure(result)) {
+  if (Exit.isFailure(result)) {
     return c.json({ error: "Failed to get balance" }, 500);
   }
 
   return c.json(result.value);
-});
-
-// Proxy to sandbox-mcp web UI
-app.all("/session/:sessionId/*", async (c) => {
-  // Auth check for proxy
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const token = authHeader.split(" ")[1];
-  
-  const res = await fetch(`${c.env.SUPABASE_URL}/auth/v1/user`, {
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "apikey": c.env.SUPABASE_ANON_KEY,
-    }
-  });
-
-  if (!res.ok) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const user = await res.json() as { id: string };
-  const sessionId = c.req.param("sessionId");
-
-  // Check ownership
-  const ownership = await c.env.DB.prepare(
-    "SELECT 1 FROM user_sessions WHERE user_id = ? AND session_id = ?"
-  ).bind(user.id, sessionId).first();
-
-  if (!ownership) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  // Proxy to sandbox-mcp
-  return c.env.SANDBOX_MCP.fetch(c.req.raw);
 });
 
 // Proxy to sandbox-mcp web UI
