@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import { Send, Paperclip, Bot, User, Loader2, ExternalLink, Maximize2, Minimize2, X, ChevronLeft } from "lucide-react"
 import { cn } from "../lib/utils"
 import { Button } from "./ui/Button"
-import type { Sandbox } from "../data/sandboxes"
+import type { Sandbox } from "../lib/api"
 
 interface Message {
   id: string
@@ -174,7 +174,7 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [chatWidth, setChatWidth] = useState(380)
 
-  const iframeUrl = `/box-preview.html?sandbox=${sandbox.id}`
+  const iframeUrl = sandbox.webUiUrl
 
   return (
     <div className="fixed inset-0 z-[80] bg-background flex flex-col">

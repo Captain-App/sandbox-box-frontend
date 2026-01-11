@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
 export interface Sandbox {
-  id: string;
+  id: string; // Used by frontend (maps to sessionId)
   sessionId: string;
   sandboxId: string;
   status: 'creating' | 'active' | 'idle' | 'stopped' | 'error';
@@ -16,6 +16,14 @@ export interface Sandbox {
     branch: string;
   };
   title?: string;
+  config?: {
+    defaultModel: string;
+  };
+  opencodeSessionId?: string;
+  clonedRepos?: string[];
+  // Frontend calculated fields
+  tasksCompleted?: number;
+  memoryUsage?: string;
 }
 
 async function getAuthHeaders() {
