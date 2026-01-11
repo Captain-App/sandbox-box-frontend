@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import { ShieldAlert, X } from "lucide-react"
 import { Button } from "./ui/Button"
 import { cn } from "../lib/utils"

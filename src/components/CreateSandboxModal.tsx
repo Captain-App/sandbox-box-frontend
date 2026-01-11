@@ -1,5 +1,5 @@
-import React, { useState } from "react"
-import { Box, X, Shield, Globe, Github, Zap } from "lucide-react"
+import { useState } from "react"
+import { Box, X, Github, Zap } from "lucide-react"
 import { Button } from "./ui/Button"
 import { cn } from "../lib/utils"
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { Send, Paperclip, Bot, User, Loader2, ExternalLink, Maximize2, Minimize2, X, ChevronLeft } from "lucide-react"
+import { Send, Paperclip, Bot, User, ExternalLink, Maximize2, Minimize2, ChevronLeft } from "lucide-react"
 import { cn } from "../lib/utils"
 import { Button } from "./ui/Button"
 import type { Sandbox } from "../lib/api"
@@ -83,13 +83,13 @@ export function ChatPanel({ sandbox }: ChatPanelProps) {
     <div className="flex flex-col h-full bg-slate-950 border-r border-white/5">
       {/* Header */}
       <div className="p-4 border-b border-white/5">
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
             <Bot className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <div className="text-sm font-bold">{sandbox.name}</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-widest">{sandbox.region}</div>
+            <div className="text-sm font-bold">{sandbox.title || sandbox.id}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Cloudflare Sandbox</div>
           </div>
         </div>
       </div>
@@ -172,7 +172,7 @@ interface BoxWorkspaceProps {
 
 export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [chatWidth, setChatWidth] = useState(380)
+  const [chatWidth] = useState(380)
 
   const iframeUrl = sandbox.webUiUrl
 
@@ -191,7 +191,7 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
           <div className="h-4 w-px bg-white/10" />
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-sm font-bold">{sandbox.name}</span>
+            <span className="text-sm font-bold">{sandbox.title || sandbox.id}</span>
           </div>
         </div>
 
@@ -223,7 +223,7 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
           <iframe 
             src={iframeUrl}
             className="w-full h-full border-0"
-            title={`${sandbox.name} Preview`}
+            title={`${sandbox.title || sandbox.id} Preview`}
           />
           
           {/* Fallback content for demo */}
@@ -233,13 +233,13 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
                 <Bot className="w-10 h-10 text-primary" />
               </div>
               <h1 className="text-4xl font-black tracking-tighter uppercase text-white">
-                {sandbox.name}
+                {sandbox.title || sandbox.id}
               </h1>
               <p className="text-muted-foreground">
                 This is your box's hosted preview. Your agent can deploy websites, APIs, and admin dashboards here. Ask it to build something!
               </p>
               <div className="flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                <span>{sandbox.region}</span>
+                <span>Cloudflare Sandbox</span>
                 <span>•</span>
                 <span>Workers for Platforms</span>
                 <span>•</span>

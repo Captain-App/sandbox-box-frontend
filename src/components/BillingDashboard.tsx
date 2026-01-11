@@ -1,4 +1,4 @@
-import { CreditCard, ArrowUpRight, History, Zap, TrendingUp, AlertCircle } from "lucide-react"
+import { CreditCard, ArrowUpRight, Zap, TrendingUp, AlertCircle } from "lucide-react"
 import { Button } from "./ui/Button"
 import { cn } from "../lib/utils"
 

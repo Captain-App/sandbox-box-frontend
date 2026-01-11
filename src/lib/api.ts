@@ -21,12 +21,14 @@ export interface Sandbox {
   };
   opencodeSessionId?: string;
   clonedRepos?: string[];
-  // Frontend calculated fields
+  // Frontend display fields
+  name?: string; // Display name (alias for title)
+  region?: string; // Display region
   tasksCompleted?: number;
   memoryUsage?: string;
 }
 
-async function getAuthHeaders() {
+async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return {};
   return {

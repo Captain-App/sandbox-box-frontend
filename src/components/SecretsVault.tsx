@@ -1,7 +1,6 @@
 import { Key, Eye, EyeOff, Trash2, Plus, ShieldCheck } from "lucide-react"
 import { useState } from "react"
 import { Button } from "./ui/Button"
-import { cn } from "../lib/utils"
 
 interface Secret {
   id: string

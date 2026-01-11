@@ -1,4 +1,4 @@
-import { Store, Download, Check, Sparkles, Code, Globe, MessageSquare } from "lucide-react"
+import { Download, Check, Sparkles, Code, Globe, MessageSquare } from "lucide-react"
 import { Button } from "./ui/Button"
 import { cn } from "../lib/utils"
 
