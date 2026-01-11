@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { createClient } from "@supabase/supabase-js";
 
 type Bindings = {
   DB: D1Database;
@@ -21,7 +20,7 @@ app.use("*", cors());
 // Health check - no auth needed
 app.get("/health", (c) => c.text("OK"));
 
-// Auth middleware for /sessions/*
+// Minimal auth middleware - verify JWT with Supabase GoTrue API directly
 app.use("/sessions/*", async (c, next) => {
   const authHeader = c.req.header("Authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -29,14 +28,20 @@ app.use("/sessions/*", async (c, next) => {
   }
 
   const token = authHeader.split(" ")[1];
-  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY);
+  
+  // Call Supabase GoTrue API directly instead of using SDK
+  const res = await fetch(`${c.env.SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "apikey": c.env.SUPABASE_ANON_KEY,
+    }
+  });
 
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-
-  if (error || !user) {
-    return c.json({ error: "Unauthorized", details: error?.message }, 401);
+  if (!res.ok) {
+    return c.json({ error: "Unauthorized" }, 401);
   }
 
+  const user = await res.json() as { id: string };
   c.set("user", { id: user.id });
   await next();
 });
@@ -172,13 +177,19 @@ app.all("/session/:sessionId/*", async (c) => {
   }
 
   const token = authHeader.split(" ")[1];
-  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_ANON_KEY);
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  
+  const res = await fetch(`${c.env.SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "apikey": c.env.SUPABASE_ANON_KEY,
+    }
+  });
 
-  if (error || !user) {
+  if (!res.ok) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
+  const user = await res.json() as { id: string };
   const sessionId = c.req.param("sessionId");
 
   // Check ownership
