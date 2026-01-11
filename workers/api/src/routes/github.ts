@@ -87,11 +87,11 @@ export const githubRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
         });
 
         if (!res.ok) {
-          const text = await res.text();
+          const text = yield* Effect.tryPromise(() => res.text());
           throw new Error(`GitHub API error ${res.status}: ${text}`);
         }
         
-        const data = await res.json() as any;
+        const data = yield* Effect.tryPromise(() => res.json() as Promise<any>);
         return data.repositories.map((r: any) => ({
           id: r.id,
           name: r.name,
