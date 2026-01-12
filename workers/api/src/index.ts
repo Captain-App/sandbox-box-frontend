@@ -8,6 +8,7 @@ import { githubRoutes } from "./routes/github";
 import { settingsRoutes } from "./routes/settings";
 import { billingRoutes } from "./routes/billing";
 import { boxSecretsRoutes } from "./routes/box-secrets";
+import { adminRoutes } from "./routes/admin";
 import { GitHubService, makeGitHubServiceLayer } from "./services/github";
 import { ApiKeyService, makeApiKeyServiceLayer } from "./services/api-keys";
 import { makeBillingServiceLayer, BillingService } from "./services/billing";
@@ -31,6 +32,7 @@ export type Bindings = {
   STRIPE_API_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
   APP_URL?: string;
+  ADMIN_TOKEN?: string;
   HONEYCOMB_API_KEY?: string;
   HONEYCOMB_DATASET?: string;
   RATE_LIMITER: { limit: (options: { key: string }) => Promise<{ success: boolean }> };
@@ -45,6 +47,17 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 // Health check - no auth needed
 app.get("/health", (c) => c.text("OK"));
 
+// Health check for engine
+app.get("/internal/engine-health", async (c) => {
+  try {
+    const res = await c.env.SANDBOX_MCP.fetch("http://engine/health");
+    if (res.ok) return c.text("OK");
+    return c.text("Engine unhealthy", 503);
+  } catch (e) {
+    return c.text("Engine unreachable", 503);
+  }
+});
+
 // Logging & Request ID
 app.use("*", loggingMiddleware());
 
@@ -53,9 +66,10 @@ app.use("*", cors());
 
 // Authentication Middleware
 const authMiddleware = async (c: any, next: any) => {
-  // Skip auth for internal and webhooks
+  // Skip auth for internal, admin, and webhooks
   if (
     c.req.path.startsWith("/internal/") ||
+    c.req.path.startsWith("/admin/") ||
     c.req.path === "/github/webhook" ||
     c.req.path === "/billing/webhook"
   ) {
@@ -89,8 +103,8 @@ app.use("*", authMiddleware);
 
 // Rate Limiting Middleware
 app.use("*", async (c, next) => {
-  // Skip for internal and health
-  if (c.req.path.startsWith("/internal/") || c.req.path === "/health") {
+  // Skip for internal, admin, and health
+  if (c.req.path.startsWith("/internal/") || c.req.path.startsWith("/admin/") || c.req.path === "/health") {
     await next();
     return;
   }
@@ -205,6 +219,7 @@ app.route("/github", githubRoutes);
 app.route("/settings", settingsRoutes);
 app.route("/billing", billingRoutes);
 app.route("/box-secrets", boxSecretsRoutes);
+app.route("/admin", adminRoutes);
 
 // Internal API for engine to check balance
 app.get("/internal/check-balance/:userId", async (c) => {

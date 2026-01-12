@@ -1,0 +1,26 @@
+{
+  "name": "shipbox-admin-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "cf-typegen": "wrangler types",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@microlabs/otel-cf-workers": "^1.0.0-rc.52",
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "@sentry/cloudflare": "^10.32.1",
+    "@shipbox/shared": "*",
+    "agents": "^0.2.34",
+    "effect": "^3.19.13",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260111.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.56.0"
+  }
+}

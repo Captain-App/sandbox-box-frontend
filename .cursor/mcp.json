@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "shipbox-admin": {
+      "type": "sse",
+      "url": "https://shipbox-admin-mcp.captainapp.workers.dev/mcp"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"skipLibCheck": true,
+		"lib": ["ESNext"],
+		"types": ["@cloudflare/workers-types"],
+		"isolatedModules": true,
+		"noEmit": true,
+		"allowJs": true,
+		"checkJs": false,
+		"esModuleInterop": true,
+		"baseUrl": ".",
+		"paths": {
+			"@shipbox/shared": ["../../packages/shared/src"]
+		}
+	},
+	"include": ["src/**/*", "worker-configuration.d.ts"]
+}

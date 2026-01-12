@@ -7,7 +7,7 @@ import { api } from "../lib/api"
 interface CreateSandboxModalProps {
   isOpen: boolean
   onClose: () => void
-  onCreate: (name: string, region: string, repository?: string) => Promise<void>
+  onCreate: (name: string, region: string, repository?: string) => Promise<{ id: string }>
 }
 
 const regions = [
@@ -22,6 +22,7 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
   const nameRef = useRef<HTMLInputElement>(null)
   const repoRef = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const logEndRef = useRef<HTMLDivElement>(null)
   
   const [name, setName] = useState("") // Keep name state for UI feedback (disabling button)
   const [selectedRegion, setSelectedRegion] = useState("lhr")
@@ -32,6 +33,8 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [logs, setLogs] = useState<any[]>([])
+  const [createdId, setCreatedId] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -39,6 +42,8 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
       Promise.resolve().then(() => {
         setError(null)
         setLoadingRepos(true)
+        setLogs([])
+        setCreatedId(null)
       })
       
       api.getGitHubRepos()
@@ -47,6 +52,37 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
         .finally(() => setLoadingRepos(false))
     }
   }, [isOpen])
+
+  // Scroll to bottom of logs
+  useEffect(() => {
+    if (logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [logs])
+
+  // Poll for logs when initialization is in progress
+  useEffect(() => {
+    if (!isLoading || !createdId) return
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://backend.shipbox.dev'}/internal/sessions/${createdId}/logs`, {
+          headers: {
+            'Authorization': `Bearer ${(await api.getAuthToken())}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Sort by timestamp ascending
+          setLogs(data.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+        }
+      } catch (err) {
+        console.error("Failed to poll logs:", err);
+      }
+    }, 2000);
+
+    return () => clearInterval(pollInterval);
+  }, [isLoading, createdId]);
 
   const filteredRepos = githubRepos.filter(r => 
     r.full_name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -61,7 +97,27 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
     setIsLoading(true);
     setError(null);
     try {
-      await onCreate(finalName, selectedRegion, finalRepo || undefined);
+      const sandbox = await onCreate(finalName, selectedRegion, finalRepo || undefined);
+      setCreatedId(sandbox.id);
+      
+      // Wait for initialization to complete by polling status
+      const checkStatus = setInterval(async () => {
+        try {
+          const sb = await api.getSession(sandbox.id);
+          if (sb.status === 'active') {
+            clearInterval(checkStatus);
+            setIsLoading(false);
+            onClose();
+          } else if (sb.status === 'error') {
+            clearInterval(checkStatus);
+            setError("Initialization failed. Check logs for details.");
+            setIsLoading(false);
+          }
+        } catch (err) {
+          // Ignore transient errors
+        }
+      }, 3000);
+      
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to initialise sandbox';
       setError(message);
@@ -223,6 +279,39 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
               {isLoading ? "Initialising..." : "Initialise Sandbox"}
             </Button>
+
+            {isLoading && (
+              <div className="mt-6 space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">Initialisation Logs</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">{logs.length} operations logged</span>
+                </div>
+                <div className="bg-black/50 border border-white/10 rounded-xl p-4 h-48 overflow-y-auto font-mono text-[10px] space-y-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                  {logs.length === 0 ? (
+                    <div className="text-muted-foreground animate-pulse">Waiting for sandbox engine...</div>
+                  ) : (
+                    logs.map((log, i) => (
+                      <div key={i} className="space-y-1 border-b border-white/5 pb-2 last:border-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-primary/50">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                          <span className={cn(
+                            "font-bold uppercase",
+                            log.exitCode === 0 ? "text-green-500" : "text-red-500"
+                          )}>
+                            {log.context}
+                          </span>
+                          <span className="text-muted-foreground">({log.durationMs}ms)</span>
+                        </div>
+                        <div className="text-white/80 break-all">{log.command}</div>
+                        {log.stderr && <div className="text-red-400/80 italic">{log.stderr}</div>}
+                      </div>
+                    ))
+                  )}
+                  <div ref={logEndRef} />
+                </div>
+              </div>
+            )}
+
             <p className="text-[10px] text-center text-muted-foreground mt-4 uppercase tracking-widest">
               Standard compute rates apply: approx. £0.01 / hour idle
             </p>

@@ -41,6 +41,7 @@
     "GITHUB_APP_NAME": "ship-box",
     "HONEYCOMB_DATASET": "shipbox-api",
     "APP_URL": "https://shipbox.dev",
+    "ADMIN_USER_EMAIL": "admin@captainapp.co.uk",
     "STRIPE_CUSTOMER_PORTAL_URL": "https://billing.stripe.com/p/session/test_YWNjdF8xUXBaZTRQRFF6S0ZueFlNfF9SZkJSM3ExUWZ6OWpZUGZYS3pZcXpZcXpZcXpZcXpZ"
   }
 }

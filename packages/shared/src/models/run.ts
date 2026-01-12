@@ -26,6 +26,22 @@ export const RunResult = Schema.Struct({
 export type RunResult = typeof RunResult.Type;
 
 /**
+ * Status of an individual workflow step
+ */
+export const StepStatus = Schema.Literal("pending", "running", "completed", "failed");
+export type StepStatus = typeof StepStatus.Type;
+
+/**
+ * Detailed information about a run phase/step
+ */
+export const RunPhase = Schema.Struct({
+  status: StepStatus,
+  durationMs: Schema.optionalWith(Schema.Number, { exact: true }),
+  error: Schema.optionalWith(Schema.String, { exact: true }),
+});
+export type RunPhase = typeof RunPhase.Type;
+
+/**
  * Complete run record stored in R2
  */
 export const RunRecord = Schema.Struct({
@@ -39,5 +55,7 @@ export const RunRecord = Schema.Struct({
   startedAt: Schema.Number,
   completedAt: Schema.optionalWith(Schema.Number, { exact: true }),
   result: Schema.optionalWith(RunResult, { exact: true }),
+  currentStep: Schema.optionalWith(Schema.String, { exact: true }),
+  phases: Schema.optionalWith(Schema.Record({ key: Schema.String, value: RunPhase }), { exact: true }),
 });
 export type RunRecord = typeof RunRecord.Type;

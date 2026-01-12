@@ -97,7 +97,7 @@ function App() {
     const newSandbox = await api.createSession(name, region, repository)
     setSandboxes(prev => [newSandbox, ...prev])
     setActiveSandbox(newSandbox)
-    setIsCreateModalOpen(false)
+    return newSandbox
   }
 
   const handleOpenBox = (sandbox?: Sandbox) => {

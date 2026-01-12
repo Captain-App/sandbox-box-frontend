@@ -1,0 +1,434 @@
+import { McpAgent } from "agents/mcp";
+import type { Connection, ConnectionContext } from "agents";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Effect, pipe } from "effect";
+import * as Sentry from "@sentry/cloudflare";
+import { 
+  withRequestContext, 
+  withSentry, 
+  LoggerLayer 
+} from "@shipbox/shared";
+import { 
+  adminGetStatsSchema,
+  adminListUsersSchema,
+  adminListSessionsSchema,
+  adminListTransactionsSchema,
+  adminGetErrorsSchema,
+  adminCheckHealthSchema,
+  adminListR2SessionsSchema,
+  adminGetSessionLogsSchema,
+  adminGetSessionMetadataSchema,
+  adminListRecentTracesSchema,
+  adminGetTraceSchema,
+  adminGetSessionTracesSchema,
+  adminGetAuthTokenSchema,
+  formatToolResponse,
+  formatErrorResponse,
+  type AdminGetStatsInput,
+  type AdminListUsersInput,
+  type AdminListSessionsInput,
+  type AdminListTransactionsInput,
+  type AdminGetErrorsInput,
+  type AdminCheckHealthInput,
+  type AdminListR2SessionsInput,
+  type AdminGetSessionLogsInput,
+  type AdminGetSessionMetadataInput,
+  type AdminListRecentTracesInput,
+  type AdminGetTraceInput,
+  type AdminGetSessionTracesInput,
+  type AdminGetAuthTokenInput
+} from "./tools";
+import { SentryService, makeSentryServiceLayer } from "../services/sentry";
+import { Env } from "../types";
+
+interface AdminState {
+  initialized: boolean;
+}
+
+export class AdminMcpAgent extends McpAgent<Env, AdminState> {
+  server = new McpServer({
+    name: "shipbox-admin",
+    version: "1.0.0",
+  }) as any;
+
+  initialState: AdminState = {
+    initialized: false,
+  };
+
+  async init(): Promise<void> {
+    this.registerStatsTool();
+    this.registerUsersTool();
+    this.registerSessionsTool();
+    this.registerTransactionsTool();
+    this.registerErrorsTool();
+    this.registerHealthTool();
+    this.registerR2SessionsTool();
+    this.registerSessionLogsTool();
+    this.registerSessionMetadataTool();
+    this.registerRecentTracesTool();
+    this.registerTraceTool();
+    this.registerSessionTracesTool();
+    this.registerAuthTokenTool();
+
+    this.setState({ initialized: true });
+  }
+
+  override async onConnect(connection: Connection, ctx: ConnectionContext): Promise<void> {
+    console.log(`[AdminMCP] onConnect: ${ctx.request.url}`);
+    return super.onConnect(connection, ctx);
+  }
+
+  private async fetchAdmin(path: string, searchParams?: Record<string, string>): Promise<any> {
+    const url = new URL(`http://api/admin${path}`);
+    if (searchParams) {
+      Object.entries(searchParams).forEach(([k, v]) => url.searchParams.set(k, v));
+    }
+
+    const response = await this.env.SHIPBOX_API.fetch(url.toString(), {
+      headers: {
+        "X-Admin-Token": this.env.ADMIN_TOKEN,
+        "X-Request-Id": crypto.randomUUID(),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Admin API error: ${response.status} ${await response.text()}`);
+    }
+
+    return response.json();
+  }
+
+  private registerStatsTool(): void {
+    this.server.registerTool(
+      "admin_get_stats",
+      {
+        description: "Get high-level system stats (users, sessions, revenue).",
+        inputSchema: adminGetStatsSchema,
+      },
+      async (params: AdminGetStatsInput) => {
+        try {
+          const stats = await this.fetchAdmin("/stats");
+          return formatToolResponse(stats);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "STATS_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerUsersTool(): void {
+    this.server.registerTool(
+      "admin_list_users",
+      {
+        description: "List users with balances and activity.",
+        inputSchema: adminListUsersSchema,
+      },
+      async (params: AdminListUsersInput) => {
+        try {
+          const users = await this.fetchAdmin("/users", {
+            limit: params.limit.toString(),
+            offset: params.offset.toString(),
+          });
+          return formatToolResponse(users);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "USERS_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerSessionsTool(): void {
+    this.server.registerTool(
+      "admin_list_sessions",
+      {
+        description: "List all sessions across users.",
+        inputSchema: adminListSessionsSchema,
+      },
+      async (params: AdminListSessionsInput) => {
+        try {
+          const sessions = await this.fetchAdmin("/sessions", {
+            limit: params.limit.toString(),
+            offset: params.offset.toString(),
+            ...(params.status ? { status: params.status } : {}),
+          });
+          return formatToolResponse(sessions);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "SESSIONS_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerTransactionsTool(): void {
+    this.server.registerTool(
+      "admin_list_transactions",
+      {
+        description: "List recent transactions.",
+        inputSchema: adminListTransactionsSchema,
+      },
+      async (params: AdminListTransactionsInput) => {
+        try {
+          const transactions = await this.fetchAdmin("/transactions", {
+            limit: params.limit.toString(),
+            offset: params.offset.toString(),
+            ...(params.userId ? { userId: params.userId } : {}),
+          });
+          return formatToolResponse(transactions);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "TRANSACTIONS_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerErrorsTool(): void {
+    this.server.registerTool(
+      "admin_get_errors",
+      {
+        description: "Get recent unresolved errors from Sentry.",
+        inputSchema: adminGetErrorsSchema,
+      },
+      async (params: AdminGetErrorsInput) => {
+        if (!this.env.SENTRY_AUTH_TOKEN) {
+          return formatErrorResponse({
+            code: "CONFIG_ERROR",
+            message: "SENTRY_AUTH_TOKEN not configured",
+          });
+        }
+
+        const project = params.project === "api" ? this.env.SENTRY_PROJECT_API : this.env.SENTRY_PROJECT_ENGINE;
+        const sentryLayer = makeSentryServiceLayer(this.env.SENTRY_AUTH_TOKEN, this.env.SENTRY_ORG);
+
+        try {
+          const result = await Effect.runPromise(
+            pipe(
+              Effect.gen(function* () {
+                const sentry = yield* SentryService;
+                return yield* sentry.getRecentIssues(project);
+              }),
+              Effect.provide(sentryLayer)
+            )
+          );
+          return formatToolResponse(result);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "SENTRY_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerHealthTool(): void {
+    this.server.registerTool(
+      "admin_check_health",
+      {
+        description: "Check health of all Shipbox services.",
+        inputSchema: adminCheckHealthSchema,
+      },
+      async (params: AdminCheckHealthInput) => {
+        const results: Record<string, any> = {};
+
+        // 1. Check API
+        try {
+          const start = Date.now();
+          const res = await this.env.SHIPBOX_API.fetch("http://api/health");
+          results.api = {
+            status: res.status === 200 ? "healthy" : "unhealthy",
+            latency: Date.now() - start,
+          };
+        } catch (e) {
+          results.api = { status: "error", message: String(e) };
+        }
+
+        // 2. Check Engine via API proxy
+        try {
+          const start = Date.now();
+          const res = await this.env.SHIPBOX_API.fetch("http://api/internal/engine-health");
+          results.engine = {
+            status: res.status === 200 ? "healthy" : "unhealthy",
+            latency: Date.now() - start,
+          };
+        } catch (e) {
+          results.engine = { status: "error", message: String(e) };
+        }
+
+        return formatToolResponse(results);
+      }
+    );
+  }
+
+  private registerR2SessionsTool(): void {
+    this.server.registerTool(
+      "admin_list_r2_sessions",
+      {
+        description: "List all sessions from R2 storage index (most accurate for MCP-only sessions).",
+        inputSchema: adminListR2SessionsSchema,
+      },
+      async (params: AdminListR2SessionsInput) => {
+        try {
+          const res = await this.env.SANDBOX_MCP.fetch("http://sandbox/internal/sessions", {
+            headers: { "X-Request-Id": crypto.randomUUID() }
+          });
+          if (!res.ok) throw new Error(`Engine API error: ${res.status} ${await res.text()}`);
+          const data = await res.json();
+          return formatToolResponse(data);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "R2_SESSIONS_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerSessionLogsTool(): void {
+    this.server.registerTool(
+      "admin_get_session_logs",
+      {
+        description: "Get recent command logs for a specific session.",
+        inputSchema: adminGetSessionLogsSchema,
+      },
+      async (params: AdminGetSessionLogsInput) => {
+        try {
+          const res = await this.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${params.sessionId}/logs`, {
+            headers: { "X-Request-Id": crypto.randomUUID() }
+          });
+          if (!res.ok) throw new Error(`Engine API error: ${res.status} ${await res.text()}`);
+          const data = await res.json();
+          return formatToolResponse(data);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "SESSION_LOGS_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerSessionMetadataTool(): void {
+    this.server.registerTool(
+      "admin_get_session_metadata",
+      {
+        description: "Get full metadata for a specific session from R2.",
+        inputSchema: adminGetSessionMetadataSchema,
+      },
+      async (params: AdminGetSessionMetadataInput) => {
+        try {
+          const res = await this.env.SANDBOX_MCP.fetch("http://sandbox/internal/sessions/${params.sessionId}", {
+            headers: { "X-Request-Id": crypto.randomUUID() }
+          });
+          if (!res.ok) throw new Error(`Engine API error: ${res.status} ${await res.text()}`);
+          const data = await res.json();
+          return formatToolResponse(data);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "SESSION_METADATA_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerRecentTracesTool(): void {
+    this.server.registerTool(
+      "admin_list_recent_traces",
+      {
+        description: "List recent distributed traces from Honeycomb.",
+        inputSchema: adminListRecentTracesSchema,
+      },
+      async (params: AdminListRecentTracesInput) => {
+        try {
+          const traces = await this.fetchAdmin("/traces/recent", {
+            limit: params.limit.toString(),
+          });
+          return formatToolResponse(traces);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "TRACES_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerTraceTool(): void {
+    this.server.registerTool(
+      "admin_get_trace",
+      {
+        description: "Get full details for a specific trace ID from Honeycomb.",
+        inputSchema: adminGetTraceSchema,
+      },
+      async (params: AdminGetTraceInput) => {
+        try {
+          const trace = await this.fetchAdmin(`/traces/${params.traceId}`);
+          return formatToolResponse(trace);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "TRACE_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerSessionTracesTool(): void {
+    this.server.registerTool(
+      "admin_get_session_traces",
+      {
+        description: "Get all traces associated with a specific session ID.",
+        inputSchema: adminGetSessionTracesSchema,
+      },
+      async (params: AdminGetSessionTracesInput) => {
+        try {
+          const traces = await this.fetchAdmin(`/traces/session/${params.sessionId}`);
+          return formatToolResponse(traces);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "SESSION_TRACES_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+
+  private registerAuthTokenTool(): void {
+    this.server.registerTool(
+      "admin_get_auth_token",
+      {
+        description: "Get a valid Supabase JWT for the admin user (admin@captainapp.co.uk) to interact with the service as a user.",
+        inputSchema: adminGetAuthTokenSchema,
+      },
+      async (params: AdminGetAuthTokenInput) => {
+        try {
+          const result = await this.fetchAdmin("/auth/token");
+          return formatToolResponse(result);
+        } catch (error) {
+          return formatErrorResponse({
+            code: "AUTH_TOKEN_ERROR",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    );
+  }
+}
