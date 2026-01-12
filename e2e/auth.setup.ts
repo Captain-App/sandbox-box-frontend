@@ -5,6 +5,9 @@ const authFile = 'playwright/.auth/user.json';
 // This setup project authenticates once and saves the session
 // All other tests reuse this session via storageState
 setup('authenticate', async ({ page }) => {
+  page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
+  page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
+
   // Skip if E2E credentials not provided
   const email = process.env.E2E_TEST_EMAIL;
   const password = process.env.E2E_TEST_PASSWORD;
@@ -34,7 +37,7 @@ setup('authenticate', async ({ page }) => {
   await page.goto('/');
   
   // Wait for auth page to load
-  await expect(page.getByText(/Shipbox/i).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Shipbox/i }).first()).toBeVisible({ timeout: 30000 });
   
   // Fill in credentials
   await page.fill('input[type="email"]', email);
