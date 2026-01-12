@@ -124,24 +124,24 @@ function App() {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
-        ) : !activeSandbox ? (
-          <div className="p-12 rounded-3xl border border-white/5 bg-white/5 text-center space-y-6">
-            <div className="w-20 h-20 mx-auto rounded-3xl bg-primary/10 flex items-center justify-center">
-              <Box className="w-10 h-10 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-3xl font-black uppercase tracking-tighter">No Sandboxes Found</h2>
-              <p className="text-muted-foreground">You haven't created any agent environments yet.</p>
-            </div>
-            <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2">
-              <Zap className="w-4 h-4" />
-              Initialise Your First Box
-            </Button>
-          </div>
         ) : (
           <>
             {activeTab === 'dashboard' && (
-              <>
+              !activeSandbox ? (
+                <div className="p-12 rounded-3xl border border-white/5 bg-white/5 text-center space-y-6">
+                  <div className="w-20 h-20 mx-auto rounded-3xl bg-primary/10 flex items-center justify-center">
+                    <Box className="w-10 h-10 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-3xl font-black uppercase tracking-tighter">No Sandboxes Found</h2>
+                    <p className="text-muted-foreground">You haven't created any agent environments yet.</p>
+                  </div>
+                  <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2">
+                    <Zap className="w-4 h-4" />
+                    Initialise Your First Box
+                  </Button>
+                </div>
+              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl col-span-2 relative overflow-hidden">
                     <div className="relative z-10">
@@ -220,11 +220,7 @@ function App() {
                     </button>
                   </div>
                 </div>
-
-                <div className="p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl">
-                  <ActivityTimeline />
-                </div>
-              </>
+              )
             )}
             
             {activeTab === 'activity' && (
@@ -255,58 +251,65 @@ function App() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
-                  {sandboxes.map((sb) => (
-                    <div key={sb.id} className="p-6 rounded-3xl border border-white/5 bg-white/5 flex items-center justify-between group hover:bg-white/10 transition-all">
-                      <div className="flex items-center gap-6">
-                        <div className={cn(
-                          "w-12 h-12 rounded-2xl flex items-center justify-center",
-                          sb.status === 'active' ? "bg-green-500/10 text-green-500" : "bg-white/5 text-muted-foreground"
-                        )}>
-                          <Server className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-black uppercase tracking-tight text-white">{sb.title || sb.id}</h3>
-                          <div className="flex items-center gap-4 mt-1">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                              <Globe className="w-3 h-3" />
-                              Cloudflare Sandbox
-                            </div>
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                              <Clock className="w-3 h-3" />
-                              {new Date(sb.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="text-right mr-4">
-                          <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usage</div>
-                          <div className="text-sm font-bold text-primary">£2.10 this month</div>
-                        </div>
-                        {activeSandbox?.id === sb.id ? (
-                          <div className="flex items-center gap-2">
-                            <div className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Active
-                            </div>
-                            <Button onClick={() => handleOpenBox(sb)} size="sm" className="gap-2">
-                              <Play className="w-3 h-3" />
-                              Open
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => setActiveSandbox(sb)}>Select</Button>
-                            <Button onClick={() => handleOpenBox(sb)} size="sm" className="gap-2">
-                              <Play className="w-3 h-3" />
-                              Open
-                            </Button>
-                          </div>
-                        )}
-                      </div>
+                  {sandboxes.length === 0 ? (
+                    <div className="p-12 rounded-3xl border border-white/5 bg-white/5 text-center space-y-4">
+                      <p className="text-muted-foreground">No boxes found. Create one to get started.</p>
+                      <Button onClick={() => setIsCreateModalOpen(true)} variant="secondary" size="sm">Create First Box</Button>
                     </div>
-                  ))}
+                  ) : (
+                    sandboxes.map((sb) => (
+                      <div key={sb.id} className="p-6 rounded-3xl border border-white/5 bg-white/5 flex items-center justify-between group hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-6">
+                          <div className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center",
+                            sb.status === 'active' ? "bg-green-500/10 text-green-500" : "bg-white/5 text-muted-foreground"
+                          )}>
+                            <Server className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-black uppercase tracking-tight text-white">{sb.title || sb.id}</h3>
+                            <div className="flex items-center gap-4 mt-1">
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                <Globe className="w-3 h-3" />
+                                Cloudflare Sandbox
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                <Clock className="w-3 h-3" />
+                                {new Date(sb.createdAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <div className="text-right mr-4">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usage</div>
+                            <div className="text-sm font-bold text-primary">£2.10 this month</div>
+                          </div>
+                          {activeSandbox?.id === sb.id ? (
+                            <div className="flex items-center gap-2">
+                              <div className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                <CheckCircle2 className="w-3 h-3" />
+                                Active
+                              </div>
+                              <Button onClick={() => handleOpenBox(sb)} size="sm" className="gap-2">
+                                <Play className="w-3 h-3" />
+                                Open
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Button variant="secondary" size="sm" onClick={() => setActiveSandbox(sb)}>Select</Button>
+                              <Button onClick={() => handleOpenBox(sb)} size="sm" className="gap-2">
+                                <Play className="w-3 h-3" />
+                                Open
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}

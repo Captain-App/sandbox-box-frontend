@@ -21,6 +21,9 @@ const { __createMockApi } = vi.hoisted(() => ({
     disconnectGitHub: vi.fn(),
     getBalance: vi.fn().mockResolvedValue({ balanceCredits: 0 }),
     createCheckoutSession: vi.fn(),
+    getBoxSecrets: vi.fn().mockResolvedValue([]),
+    createBoxSecret: vi.fn(),
+    deleteBoxSecret: vi.fn(),
   })
 }))
 
