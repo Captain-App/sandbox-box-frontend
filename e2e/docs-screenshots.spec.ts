@@ -17,6 +17,10 @@ test.describe('Generate Screenshots', () => {
     
     await page.goto('/');
     await expect(page.getByText(/Shipbox/i).first()).toBeVisible();
+    
+    // Click "Sign In" on landing page
+    await page.getByRole('button', { name: /Sign In/i }).click();
+    
     await expect(page.getByRole('button', { name: /Enter the Castle/i })).toBeVisible();
     await page.screenshot({ path: `${SCREENSHOT_DIR}/auth.png` });
     await context.close();
@@ -49,8 +53,8 @@ test.describe('Generate Screenshots', () => {
   test('capture boxes list', async ({ page }) => {
     await page.goto('/');
     await page.locator('button').filter({ hasText: /Boxes/i }).first().click();
-    // Check for Boxes heading
-    await expect(page.getByRole('heading', { name: /Boxes/i })).toBeVisible({ timeout: 10000 });
+    // Check for Boxes heading in main content
+    await expect(page.getByRole('heading', { name: /^Boxes$/ }).first()).toBeVisible({ timeout: 10000 });
     await page.waitForTimeout(1000);
     await page.screenshot({ path: `${SCREENSHOT_DIR}/boxes.png` });
   });

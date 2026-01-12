@@ -35,6 +35,12 @@ test.describe('Error Handling', () => {
 
     await page.goto('/');
     
+    // Click "Sign In" on landing page
+    const signInButton = page.getByRole('button', { name: /Sign In/i });
+    if (await signInButton.isVisible()) {
+      await signInButton.click();
+    }
+    
     // Should show login page
     await expect(page.getByText(/Shipbox/i).first()).toBeVisible();
     await expect(page.getByRole('button', { name: /Enter the Castle/i })).toBeVisible({ timeout: 15000 });

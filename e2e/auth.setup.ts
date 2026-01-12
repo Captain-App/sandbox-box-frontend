@@ -36,8 +36,14 @@ setup('authenticate', async ({ page }) => {
 
   await page.goto('/');
   
-  // Wait for auth page to load
-  await expect(page.getByRole('heading', { name: /Shipbox/i }).first()).toBeVisible({ timeout: 30000 });
+  // If we're on the landing page, click "Sign In"
+  const landingHeading = page.getByText(/Infrastructure for AI Agents/i);
+  if (await landingHeading.isVisible({ timeout: 10000 })) {
+    await page.getByRole('button', { name: /Sign In|Get Started/i }).first().click();
+  }
+  
+  // Wait for auth page to load - check for "Enter the Castle" button which is unique to Auth
+  await expect(page.getByRole('button', { name: /Enter the Castle/i })).toBeVisible({ timeout: 30000 });
   
   // Fill in credentials
   await page.fill('input[type="email"]', email);

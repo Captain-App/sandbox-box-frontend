@@ -12,6 +12,10 @@ test('shows login page when unauthenticated', async ({ browser }) => {
   
   await page.goto('/');
   await expect(page.getByText(/Shipbox/i).first()).toBeVisible();
+  
+  // Click "Sign In" on landing page
+  await page.getByRole('button', { name: /Sign In/i }).click();
+  
   await expect(page.getByRole('button', { name: /Enter the Castle/i })).toBeVisible();
   
   await context.close();

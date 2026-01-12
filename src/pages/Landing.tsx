@@ -45,7 +45,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 Get Started
                 <ArrowRight className="w-6 h-6" />
               </Button>
-              <Button variant="secondary" size="lg" className="h-16 px-10 text-lg border-white/10 hover:bg-white/5" onClick={() => window.open('https://docs.shipbox.dev')}>
+              <Button variant="outline" size="lg" className="h-16 px-10 text-lg border-white/10 hover:bg-white/5" onClick={() => window.open('https://docs.shipbox.dev')}>
                 Read Documentation
               </Button>
             </div>
