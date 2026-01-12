@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock cloudflare-specific imports before importing index
 vi.mock("@microlabs/otel-cf-workers", () => ({
-  instrumentation: (handler: any) => ({
+  instrument: (handler: any) => ({
     fetch: (request: Request, env: any, ctx: any) => handler.fetch(request, env, ctx)
   }),
 }));

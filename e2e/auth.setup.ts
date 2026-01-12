@@ -36,17 +36,18 @@ setup('authenticate', async ({ page }) => {
   // Wait for auth page to load
   await expect(page.getByText(/Shipbox/i)).toBeVisible();
   
-  // Click login button (assuming it triggers Supabase auth)
-  await page.click('button:has-text("Enter the Castle")');
-  
-  // Fill in credentials (Supabase magic link or password flow)
+  // Fill in credentials
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
-  await page.click('button[type="submit"]');
+  
+  // Click login button
+  await page.click('button:has-text("Enter the Castle")');
   
   // Wait for redirect to authenticated app
   await page.waitForURL('/');
-  await expect(page.getByText(/Sandboxes/i)).toBeVisible();
+  
+  // Check for Sidebar content instead of "Sandboxes" which might be "Active Box" or something else
+  await expect(page.getByText(/Active Box/i)).toBeVisible({ timeout: 10000 });
   
   // Save authentication state
   await page.context().storageState({ path: authFile });

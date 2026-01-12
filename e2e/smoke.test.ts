@@ -7,7 +7,7 @@ test('has title', async ({ page }) => {
 
 test('shows login page when unauthenticated', async ({ browser }) => {
   // Create a new context without the stored auth state
-  const context = await browser.newContext();
+  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await context.newPage();
   
   await page.goto('/');
@@ -55,46 +55,39 @@ test.describe('Authenticated User', () => {
     await page.goto('/');
     
     // Should show the main layout (not login)
-    await expect(page.getByText(/Shipbox/i)).toBeVisible();
+    await expect(page.getByText(/Active Box/i)).toBeVisible();
   });
 
   test('can navigate to settings', async ({ page }) => {
     await page.goto('/');
     
     // Click settings in sidebar
-    const settingsButton = page.locator('button').filter({ hasText: /Settings/i }).first();
-    if (await settingsButton.isVisible()) {
-      await settingsButton.click();
-      await expect(page.getByText(/API Key/i)).toBeVisible({ timeout: 5000 });
-    }
+    await page.locator('button').filter({ hasText: /Settings/i }).first().click();
+    await expect(page.getByText(/API Key/i)).toBeVisible({ timeout: 10000 });
   });
 
   test('can navigate to billing', async ({ page }) => {
     await page.goto('/');
     
     // Click billing in sidebar
-    const billingButton = page.locator('button').filter({ hasText: /Billing/i }).first();
-    if (await billingButton.isVisible()) {
-      await billingButton.click();
-      await expect(page.getByText(/Balance/i)).toBeVisible({ timeout: 5000 });
-    }
+    await page.locator('button').filter({ hasText: /Billing/i }).first().click();
+    await expect(page.getByText(/Balance/i)).toBeVisible({ timeout: 10000 });
   });
 
   test('can open create sandbox modal', async ({ page }) => {
     await page.goto('/');
     
     // Check if selector exists and click it to open dropdown
-    const selector = page.getByRole('button', { name: /active box/i });
-    if (await selector.isVisible()) {
-      await selector.click();
-      
-      // Click "Create New Box"
-      const createButton = page.getByText(/Create New Box/i);
-      await expect(createButton).toBeVisible();
-      await createButton.click();
-      
-      // Modal should appear
-      await expect(page.getByText(/Spawn New Sandbox/i)).toBeVisible();
-    }
+    const selector = page.getByRole('button', { name: /Active Box/i });
+    await expect(selector).toBeVisible();
+    await selector.click();
+    
+    // Click "Create New Box"
+    const createButton = page.getByText('Create New Box');
+    await expect(createButton).toBeVisible();
+    await createButton.click();
+    
+    // Modal should appear
+    await expect(page.getByText('New Sandbox Box')).toBeVisible();
   });
 });

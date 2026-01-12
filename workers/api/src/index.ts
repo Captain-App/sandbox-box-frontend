@@ -14,7 +14,7 @@ import { makeQuotaServiceLayer, QuotaService } from "./services/quota";
 import { Option } from "effect";
 import { loggingMiddleware } from "./middleware/logging";
 import { LoggerLayer, withRequestContext } from "@shipbox/shared";
-import { instrumentation } from "@microlabs/otel-cf-workers";
+import { instrument } from "@microlabs/otel-cf-workers";
 
 export type Bindings = {
   DB: D1Database;
@@ -243,7 +243,16 @@ export { app };
 export type AppType = typeof app;
 
 // Wrap app with Sentry and OTel
-export default instrumentation(
+export default instrument(
+  withSentry(
+    (env: Bindings) => ({
+      dsn: env.SENTRY_DSN,
+      tracesSampleRate: 1.0,
+    }),
+    {
+      fetch: app.fetch
+    }
+  ),
   (env: Bindings) => ({
     exporter: {
       url: "https://api.honeycomb.io/v1/traces",
@@ -254,16 +263,4 @@ export default instrumentation(
     },
     service: { name: "shipbox-api" },
   }),
-  {
-    fetch: (request: Request, env: Bindings, ctx: ExecutionContext) => {
-      const handler = withSentry(
-        (env: Bindings) => ({
-          dsn: env.SENTRY_DSN,
-          tracesSampleRate: 1.0,
-        }),
-        app.fetch
-      );
-      return handler(request, env, ctx);
-    }
-  }
 );
