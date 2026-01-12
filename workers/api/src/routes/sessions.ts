@@ -207,4 +207,100 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
       headers: forwardHeaders
     });
     return c.json(await res.json());
+  })
+  .get("/:id/plan", async (c) => {
+    const user = c.get("user");
+    const id = c.req.param("id");
+    const service = Effect.runSync(
+      Effect.map(SessionService, (s) => s).pipe(
+        Effect.provide(makeSessionServiceLayer(c.env.DB))
+      )
+    );
+
+    // Check ownership
+    const isOwned = await Effect.runPromise(service.checkOwnership(user.id, id));
+    if (!isOwned) return c.json({ error: "Forbidden" }, 403);
+
+    const traceparent = c.req.header("traceparent");
+    const baggage = c.req.header("baggage");
+    const forwardHeaders: Record<string, string> = {};
+    if (traceparent) forwardHeaders["traceparent"] = traceparent;
+    if (baggage) forwardHeaders["baggage"] = baggage;
+
+    // Proxy to sandbox-mcp internal file endpoint
+    const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${id}/files/PLAN.md`, {
+      headers: forwardHeaders
+    });
+    
+    if (res.status === 404) {
+      return c.json({ content: "" }); // Return empty plan if file doesn't exist yet
+    }
+    
+    if (!res.ok) return c.json({ error: "Failed to read plan" }, 500);
+    
+    const content = await res.text();
+    return c.json({ content });
+  })
+  .post("/:id/task", async (c) => {
+    const user = c.get("user");
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const service = Effect.runSync(
+      Effect.map(SessionService, (s) => s).pipe(
+        Effect.provide(makeSessionServiceLayer(c.env.DB))
+      )
+    );
+
+    // Check ownership
+    const isOwned = await Effect.runPromise(service.checkOwnership(user.id, id));
+    if (!isOwned) return c.json({ error: "Forbidden" }, 403);
+
+    const traceparent = c.req.header("traceparent");
+    const baggage = c.req.header("baggage");
+    const forwardHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    if (traceparent) forwardHeaders["traceparent"] = traceparent;
+    if (baggage) forwardHeaders["baggage"] = baggage;
+
+    // Start task in sandbox-mcp
+    const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${id}/task`, { 
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: forwardHeaders
+    });
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      return c.json({ error: `Failed to start task: ${errorText}` }, res.status);
+    }
+    
+    return c.json(await res.json());
+  })
+  .get("/:id/runs/:runId", async (c) => {
+    const user = c.get("user");
+    const id = c.req.param("id");
+    const runId = c.req.param("runId");
+    const service = Effect.runSync(
+      Effect.map(SessionService, (s) => s).pipe(
+        Effect.provide(makeSessionServiceLayer(c.env.DB))
+      )
+    );
+
+    // Check ownership
+    const isOwned = await Effect.runPromise(service.checkOwnership(user.id, id));
+    if (!isOwned) return c.json({ error: "Forbidden" }, 403);
+
+    const traceparent = c.req.header("traceparent");
+    const baggage = c.req.header("baggage");
+    const forwardHeaders: Record<string, string> = {};
+    if (traceparent) forwardHeaders["traceparent"] = traceparent;
+    if (baggage) forwardHeaders["baggage"] = baggage;
+
+    // Get run status from sandbox-mcp
+    const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/runs/${runId}`, {
+      headers: forwardHeaders
+    });
+    
+    if (!res.ok) return c.json({ error: "Run not found" }, 404);
+    
+    return c.json(await res.json());
   });

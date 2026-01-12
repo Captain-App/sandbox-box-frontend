@@ -97,11 +97,11 @@ export function SessionPage() {
             </div>
             <div className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1">
               {logs.map((log, i) => (
-                <div key={i} className="flex gap-4 group">
-                  <span className="text-slate-600 shrink-0 w-20">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                <div key={i} className="flex gap-4 group py-0.5">
+                  <span className="text-slate-500 shrink-0 w-20 font-medium">[{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
                   <span className={cn(
-                    "flex-1",
-                    log.type === 'stderr' ? 'text-red-400' : 'text-slate-300'
+                    "flex-1 break-all",
+                    log.type === 'stderr' ? 'text-red-400' : 'text-slate-200'
                   )}>
                     <span className="text-primary font-bold mr-2">$</span>
                     {log.message}

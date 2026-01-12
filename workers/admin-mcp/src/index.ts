@@ -42,6 +42,27 @@ const workerFetch = async (
         return res;
       }
 
+      // Proxy to engine MCP - allows SSE connections through admin-mcp
+      // This enables agents connected to admin-mcp to use engine tools
+      if (url.pathname === "/engine/mcp" || url.pathname.startsWith("/engine/mcp/")) {
+        // Rewrite path: /engine/mcp/* -> /mcp/*
+        const enginePath = url.pathname.replace("/engine/mcp", "/mcp");
+        const engineUrl = new URL(`http://sandbox${enginePath}`);
+        engineUrl.search = url.search;
+
+        // Forward the request with all headers (including Accept for SSE)
+        const proxyRequest = new Request(engineUrl.toString(), {
+          method: request.method,
+          headers: request.headers,
+          body: request.body,
+          // @ts-ignore - duplex is needed for streaming
+          duplex: "half",
+        });
+
+        // Proxy to engine and return response (including SSE streams)
+        return env.SANDBOX_MCP.fetch(proxyRequest);
+      }
+
       return new Response("Not Found", { status: 404 });
 };
 

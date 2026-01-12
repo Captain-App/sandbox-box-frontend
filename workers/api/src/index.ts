@@ -225,6 +225,12 @@ app.route("/admin", adminRoutes);
 app.get("/internal/check-balance/:userId", async (c) => {
   const userId = c.req.param("userId");
   const requestId = c.get("requestId");
+
+  // Allow admin user to bypass balance check
+  if (userId === "admin") {
+    return c.json({ ok: true });
+  }
+
   const quotaLayer = makeQuotaServiceLayer(c.env.DB);
 
   const result = await Effect.runPromiseExit(

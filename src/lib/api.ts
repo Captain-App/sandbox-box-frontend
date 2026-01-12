@@ -21,6 +21,7 @@ export interface Sandbox {
     defaultModel: string;
   };
   opencodeSessionId?: string;
+  realtimeToken?: string;
   clonedRepos?: string[];
   // Frontend display fields
   name?: string; // Display name (alias for title)
@@ -239,5 +240,34 @@ export const api = {
       headers
     });
     if (!res.ok) throw new Error('Failed to delete box secret');
+  },
+
+  // Agent Chat & Planning
+  async getPlan(sessionId: string): Promise<{ content: string }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/plan`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch plan');
+    return res.json();
+  },
+
+  async sendTask(sessionId: string, task: string, title?: string): Promise<{ runId: string; status: string }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/task`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ task, title })
+    });
+    if (!res.ok) {
+      const errorData = await res.json() as any;
+      throw new Error(errorData.error || 'Failed to start task');
+    }
+    return res.json();
+  },
+
+  async getRunStatus(sessionId: string, runId: string): Promise<{ status: string; summary?: string; error?: string }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/runs/${runId}`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch run status');
+    return res.json();
   }
 };

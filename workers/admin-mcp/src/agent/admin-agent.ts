@@ -439,6 +439,9 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
   }
 
   private registerCreateSessionTool(): void {
+    // The admin user ID for admin@captainapp.co.uk
+    const ADMIN_USER_ID = "d9f64911-fc13-41d6-9443-b50b69cc9005";
+
     this.server.registerTool(
       "admin_create_session",
       {
@@ -449,7 +452,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
         try {
           const res = await this.env.SANDBOX_MCP.fetch("http://sandbox/internal/sessions", {
             method: "POST",
-            body: JSON.stringify({ userId: params.userId || "admin" }),
+            body: JSON.stringify({ userId: params.userId || ADMIN_USER_ID }),
             headers: {
               "Content-Type": "application/json",
               "X-Request-Id": crypto.randomUUID(),
@@ -477,26 +480,100 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
       },
       async (params: AdminCallEngineMcpInput) => {
         try {
-          const res = await this.env.SANDBOX_MCP.fetch("http://sandbox/mcp", {
+          // Get a fresh JWT token for the admin user
+          const authResult = await this.fetchAdmin("/auth/token");
+          const accessToken = authResult.accessToken;
+          if (!accessToken) {
+            throw new Error("Failed to get auth token for admin user");
+          }
+
+          // Use the API URL which handles auth and proxies to engine
+          const apiUrl = "https://backend.shipbox.dev";
+
+          // First, initialize an MCP session
+          const initRes = await fetch(`${apiUrl}/mcp`, {
             method: "POST",
             body: JSON.stringify({
               jsonrpc: "2.0",
               id: crypto.randomUUID(),
-              method: params.method,
+              method: "initialize",
               params: {
-                ...params.params,
-                sessionId: params.sessionId,
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: { name: "admin-mcp", version: "1.0.0" }
               },
             }),
             headers: {
               "Content-Type": "application/json",
-              "Mcp-Session-Id": params.sessionId,
+              "Accept": "application/json, text/event-stream",
+              "Authorization": `Bearer ${accessToken}`,
               "X-Request-Id": crypto.randomUUID(),
             }
           });
-          if (!res.ok) throw new Error(`Engine MCP error: ${res.status} ${await res.text()}`);
-          const data = await res.json();
-          return formatToolResponse(data);
+
+          if (!initRes.ok) {
+            const initText = await initRes.text();
+            throw new Error(`MCP init failed: ${initRes.status} ${initText}`);
+          }
+
+          const mcpSessionId = initRes.headers.get("mcp-session-id");
+          if (!mcpSessionId) {
+            throw new Error("No mcp-session-id returned from initialize");
+          }
+
+          // Now call the actual tool
+          // Parse params if it comes as a string (MCP client quirk)
+          let toolParams = params.params || {};
+          if (typeof toolParams === "string") {
+            try {
+              toolParams = JSON.parse(toolParams);
+            } catch {
+              // Leave as-is if not valid JSON
+            }
+          }
+          if (params.method === "tools/call" && toolParams.arguments) {
+            toolParams = {
+              name: toolParams.name,
+              arguments: {
+                ...toolParams.arguments,
+                sessionId: params.sessionId,
+              },
+            };
+          }
+
+          const requestBody = {
+            jsonrpc: "2.0",
+            id: crypto.randomUUID(),
+            method: params.method,
+            params: toolParams,
+          };
+
+          const bodyStr = JSON.stringify(requestBody);
+
+          const res = await fetch(`${apiUrl}/mcp`, {
+            method: "POST",
+            body: bodyStr,
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json, text/event-stream",
+              "Authorization": `Bearer ${accessToken}`,
+              "Mcp-Session-Id": mcpSessionId,
+              "X-Request-Id": crypto.randomUUID(),
+            }
+          });
+
+          const resText = await res.text();
+
+          if (!res.ok) throw new Error(`Engine MCP error: ${res.status} ${resText}`);
+          
+          // Parse SSE response (already read above)
+          const text = resText;
+          const dataLine = text.split('\n').find(l => l.startsWith('data: '));
+          if (dataLine) {
+            const data = JSON.parse(dataLine.slice(6));
+            return formatToolResponse(data);
+          }
+          return formatToolResponse({ raw: text });
         } catch (error) {
           return formatErrorResponse({
             code: "ENGINE_MCP_ERROR",

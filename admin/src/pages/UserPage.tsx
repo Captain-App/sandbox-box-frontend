@@ -191,7 +191,7 @@ export function UserPage() {
                     <p className="text-xs font-bold text-white truncate">{secret.name}</p>
                     <p className="text-[10px] font-mono text-slate-500 uppercase">****{secret.hint}</p>
                   </div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-600">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">
                     {new Date(secret.createdAt * 1000).toLocaleDateString()}
                   </div>
                 </div>
