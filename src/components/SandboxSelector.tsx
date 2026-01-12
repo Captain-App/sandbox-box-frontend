@@ -1,32 +1,40 @@
-import { ChevronDown, Plus, Box, Check } from "lucide-react"
-import { useState, useRef, useEffect } from "react"
-import type { Sandbox } from "../lib/api"
-import { cn } from "../lib/utils"
+import { ChevronDown, Plus, Box, Check } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import type { Sandbox } from "../lib/api";
+import { cn } from "../lib/utils";
 
 interface SandboxSelectorProps {
-  activeSandbox: Sandbox
-  sandboxes: Sandbox[]
-  onSelect: (sandbox: Sandbox) => void
-  onCreateNew: () => void
+  activeSandbox: Sandbox;
+  sandboxes: Sandbox[];
+  onSelect: (sandbox: Sandbox) => void;
+  onCreateNew: () => void;
 }
 
-export function SandboxSelector({ activeSandbox, sandboxes, onSelect, onCreateNew }: SandboxSelectorProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+export function SandboxSelector({
+  activeSandbox,
+  sandboxes,
+  onSelect,
+  onCreateNew,
+}: SandboxSelectorProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -37,37 +45,54 @@ export function SandboxSelector({ activeSandbox, sandboxes, onSelect, onCreateNe
           <Box className="w-4 h-4 text-primary" />
         </div>
         <div className="text-left">
-          <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground leading-none mb-1">Active Box</div>
-          <div className="text-sm font-bold leading-none">{activeSandbox.title || activeSandbox.id}</div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground leading-none mb-1">
+            Active Box
+          </div>
+          <div className="text-sm font-bold leading-none">
+            {activeSandbox.title || activeSandbox.id}
+          </div>
         </div>
-        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform ml-2", isOpen && "rotate-180")} />
+        <ChevronDown
+          className={cn(
+            "w-4 h-4 text-muted-foreground transition-transform ml-2",
+            isOpen && "rotate-180",
+          )}
+        />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-72 p-2 rounded-2xl bg-slate-950 border border-white/10 shadow-2xl z-[60] animate-in fade-in slide-in-from-top-2" role="listbox" aria-label="Available sandboxes">
+        <div
+          className="absolute top-full left-0 mt-2 w-72 p-2 rounded-2xl bg-slate-950 border border-white/10 shadow-2xl z-[60] animate-in fade-in slide-in-from-top-2"
+          role="listbox"
+          aria-label="Available sandboxes"
+        >
           <div className="space-y-1">
             {sandboxes.map((sb) => (
               <button
                 key={sb.id}
                 onClick={() => {
-                  onSelect(sb)
-                  setIsOpen(false)
+                  onSelect(sb);
+                  setIsOpen(false);
                 }}
                 className={cn(
                   "w-full flex items-center justify-between p-3 rounded-xl transition-all",
-                  activeSandbox.id === sb.id 
-                    ? "bg-primary/10 text-primary" 
-                    : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                  activeSandbox.id === sb.id
+                    ? "bg-primary/10 text-primary"
+                    : "hover:bg-white/5 text-muted-foreground hover:text-foreground",
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-2 h-2 rounded-full",
-                    sb.status === 'active' ? "bg-green-500" : "bg-white/20"
-                  )} />
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full",
+                      sb.status === "active" ? "bg-green-500" : "bg-white/20",
+                    )}
+                  />
                   <div className="text-left">
                     <div className="text-sm font-bold">{sb.title || sb.id}</div>
-                    <div className="text-[10px] uppercase tracking-wider opacity-60">Box</div>
+                    <div className="text-[10px] uppercase tracking-wider opacity-60">
+                      Box
+                    </div>
                   </div>
                 </div>
                 {activeSandbox.id === sb.id && <Check className="w-4 h-4" />}
@@ -76,10 +101,10 @@ export function SandboxSelector({ activeSandbox, sandboxes, onSelect, onCreateNe
           </div>
 
           <div className="mt-2 pt-2 border-t border-white/5">
-            <button 
+            <button
               onClick={() => {
-                onCreateNew()
-                setIsOpen(false)
+                onCreateNew();
+                setIsOpen(false);
               }}
               className="w-full flex items-center gap-3 p-3 rounded-xl text-primary hover:bg-primary/10 transition-all"
             >
@@ -90,5 +115,5 @@ export function SandboxSelector({ activeSandbox, sandboxes, onSelect, onCreateNe
         </div>
       )}
     </div>
-  )
+  );
 }

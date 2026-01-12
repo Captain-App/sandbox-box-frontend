@@ -15,7 +15,12 @@ import { makeBillingServiceLayer, BillingService } from "./services/billing";
 import { makeQuotaServiceLayer, QuotaService } from "./services/quota";
 import { Option } from "effect";
 import { loggingMiddleware } from "./middleware/logging";
-import { LoggerLayer, withRequestContext, withSentry, captureEffectError } from "@shipbox/shared";
+import {
+  LoggerLayer,
+  withRequestContext,
+  withSentry,
+  captureEffectError,
+} from "@shipbox/shared";
 import { instrument } from "@microlabs/otel-cf-workers";
 
 export type Bindings = {
@@ -35,7 +40,9 @@ export type Bindings = {
   ADMIN_TOKEN?: string;
   HONEYCOMB_API_KEY?: string;
   HONEYCOMB_DATASET?: string;
-  RATE_LIMITER: { limit: (options: { key: string }) => Promise<{ success: boolean }> };
+  RATE_LIMITER: {
+    limit: (options: { key: string }) => Promise<{ success: boolean }>;
+  };
 };
 
 export type Variables = {
@@ -85,16 +92,16 @@ const authMiddleware = async (c: any, next: any) => {
   const token = authHeader.split(" ")[1];
   const res = await fetch(`${c.env.SUPABASE_URL}/auth/v1/user`, {
     headers: {
-      "Authorization": `Bearer ${token}`,
-      "apikey": c.env.SUPABASE_ANON_KEY,
-    }
+      Authorization: `Bearer ${token}`,
+      apikey: c.env.SUPABASE_ANON_KEY,
+    },
   });
 
   if (!res.ok) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const user = await res.json() as { id: string; email: string };
+  const user = (await res.json()) as { id: string; email: string };
   c.set("user", { id: user.id, email: user.email });
   await next();
 };
@@ -104,21 +111,25 @@ app.use("*", authMiddleware);
 // Rate Limiting Middleware
 app.use("*", async (c, next) => {
   // Skip for internal, admin, and health
-  if (c.req.path.startsWith("/internal/") || c.req.path.startsWith("/admin/") || c.req.path === "/health") {
+  if (
+    c.req.path.startsWith("/internal/") ||
+    c.req.path.startsWith("/admin/") ||
+    c.req.path === "/health"
+  ) {
     await next();
     return;
   }
 
   const user = c.get("user");
   const key = user ? user.id : c.req.header("cf-connecting-ip") || "anonymous";
-  
+
   if (c.env.RATE_LIMITER) {
     const { success } = await c.env.RATE_LIMITER.limit({ key });
     if (!success) {
       return c.json({ error: "Rate limit exceeded" }, 429);
     }
   }
-  
+
   await next();
 });
 
@@ -137,12 +148,17 @@ app.post("/internal/report-usage", async (c) => {
       Effect.provide(makeBillingServiceLayer(c.env.DB)),
       withRequestContext(requestId, userId, sessionId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (Exit.isFailure(result)) {
-    captureEffectError(result.cause, Sentry as any, { userId, sessionId, durationMs, route: "/internal/report-usage" });
+    captureEffectError(result.cause, Sentry as any, {
+      userId,
+      sessionId,
+      durationMs,
+      route: "/internal/report-usage",
+    });
     return c.json({ error: "Failed to report usage" }, 500);
   }
 
@@ -158,17 +174,30 @@ app.post("/internal/report-token-usage", async (c) => {
     pipe(
       Effect.gen(function* () {
         const billing = yield* BillingService;
-        return yield* billing.reportTokenUsage(userId, sessionId, service, inputTokens, outputTokens, model);
+        return yield* billing.reportTokenUsage(
+          userId,
+          sessionId,
+          service,
+          inputTokens,
+          outputTokens,
+          model,
+        );
       }),
       Effect.provide(makeBillingServiceLayer(c.env.DB)),
       withRequestContext(requestId, userId, sessionId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (Exit.isFailure(result)) {
-    captureEffectError(result.cause, Sentry as any, { userId, sessionId, service, model, route: "/internal/report-token-usage" });
+    captureEffectError(result.cause, Sentry as any, {
+      userId,
+      sessionId,
+      service,
+      model,
+      route: "/internal/report-token-usage",
+    });
     return c.json({ error: "Failed to report token usage" }, 500);
   }
 
@@ -179,8 +208,12 @@ app.post("/internal/report-token-usage", async (c) => {
 app.get("/internal/user-config/:userId", async (c) => {
   const userId = c.req.param("userId");
   const requestId = c.get("requestId");
-  
-  const githubLayer = makeGitHubServiceLayer(c.env.DB, c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
+
+  const githubLayer = makeGitHubServiceLayer(
+    c.env.DB,
+    c.env.GITHUB_APP_ID,
+    c.env.GITHUB_APP_PRIVATE_KEY,
+  );
   const apiKeyLayer = makeApiKeyServiceLayer(c.env.DB, c.env.PROXY_JWT_SECRET);
 
   const result = await Effect.runPromiseExit(
@@ -188,10 +221,16 @@ app.get("/internal/user-config/:userId", async (c) => {
       Effect.gen(function* () {
         const githubService = yield* GitHubService;
         const apiKeyService = yield* ApiKeyService;
-        
-        const githubToken = yield* Effect.catchAll(githubService.getInstallationToken(userId), () => Effect.succeed(null));
-        const anthropicKey = yield* Effect.catchAll(apiKeyService.getApiKey(userId), () => Effect.succeed(Option.none()));
-        
+
+        const githubToken = yield* Effect.catchAll(
+          githubService.getInstallationToken(userId),
+          () => Effect.succeed(null),
+        );
+        const anthropicKey = yield* Effect.catchAll(
+          apiKeyService.getApiKey(userId),
+          () => Effect.succeed(Option.none()),
+        );
+
         return {
           githubToken,
           anthropicKey: Option.getOrNull(anthropicKey),
@@ -201,12 +240,15 @@ app.get("/internal/user-config/:userId", async (c) => {
       Effect.provide(apiKeyLayer),
       withRequestContext(requestId, userId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (Exit.isFailure(result)) {
-    captureEffectError(result.cause, Sentry as any, { userId, route: "/internal/user-config" });
+    captureEffectError(result.cause, Sentry as any, {
+      userId,
+      route: "/internal/user-config",
+    });
     return c.json({ error: "Internal server error" }, 500);
   }
 
@@ -242,17 +284,21 @@ app.get("/internal/check-balance/:userId", async (c) => {
       Effect.provide(quotaLayer),
       withRequestContext(requestId, userId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (Exit.isFailure(result)) {
     const error = Cause.failureOrCause(result.cause);
-    const message = error._tag === "Left" ? error.left.message : "Balance check failed";
-    
+    const message =
+      error._tag === "Left" ? error.left.message : "Balance check failed";
+
     // Only capture unexpected causes, not simple insufficient balance (402)
     if (error._tag === "Right") {
-      captureEffectError(result.cause, Sentry as any, { userId, route: "/internal/check-balance" });
+      captureEffectError(result.cause, Sentry as any, {
+        userId,
+        route: "/internal/check-balance",
+      });
     }
 
     return c.json({ error: message, ok: false }, 402); // Payment Required
@@ -269,10 +315,10 @@ function getForwardedHeaders(request: Request): Record<string, string> {
   const headers: Record<string, string> = {};
   const traceparent = request.headers.get("traceparent");
   const baggage = request.headers.get("baggage");
-  
+
   if (traceparent) headers["traceparent"] = traceparent;
   if (baggage) headers["baggage"] = baggage;
-  
+
   return headers;
 }
 
@@ -280,18 +326,18 @@ function getForwardedHeaders(request: Request): Record<string, string> {
 app.all("/mcp", async (c) => {
   const user = c.get("user");
   const requestId = c.get("requestId");
-  
+
   // Create a new request with the user ID injected in headers
   const newRequest = new Request(c.req.raw);
   newRequest.headers.set("X-User-Id", user.id);
   newRequest.headers.set("X-Request-Id", requestId);
-  
+
   // Propagate trace headers
   const forwardHeaders = getForwardedHeaders(c.req.raw);
   for (const [key, value] of Object.entries(forwardHeaders)) {
     newRequest.headers.set(key, value);
   }
-  
+
   return c.env.SANDBOX_MCP.fetch(newRequest);
 });
 
@@ -303,8 +349,10 @@ app.all("/session/:sessionId/*", async (c) => {
 
   // Check ownership
   const ownership = await c.env.DB.prepare(
-    "SELECT 1 FROM user_sessions WHERE user_id = ? AND session_id = ?"
-  ).bind(user.id, sessionId).first();
+    "SELECT 1 FROM user_sessions WHERE user_id = ? AND session_id = ?",
+  )
+    .bind(user.id, sessionId)
+    .first();
 
   if (!ownership) {
     return c.json({ error: "Forbidden" }, 403);
@@ -338,8 +386,8 @@ export default instrument(
       tracesSampleRate: 1.0,
     }),
     {
-      fetch: app.fetch
-    }
+      fetch: app.fetch,
+    },
   ),
   (env: Bindings) => ({
     exporter: {

@@ -2,9 +2,26 @@ import { Context, Effect, Layer } from "effect";
 import Stripe from "stripe";
 
 export interface StripeServiceInterface {
-  readonly createCheckoutSession: (userId: string, amountCredits: number, customerId?: string | null) => Effect.Effect<{ url: string }, Error>;
-  readonly createPortalSession: (customerId: string) => Effect.Effect<{ url: string }, Error>;
-  readonly handleWebhook: (payload: string, signature: string) => Effect.Effect<{ userId: string; amountCredits: number; customerId: string; email: string }, Error>;
+  readonly createCheckoutSession: (
+    userId: string,
+    amountCredits: number,
+    customerId?: string | null,
+  ) => Effect.Effect<{ url: string }, Error>;
+  readonly createPortalSession: (
+    customerId: string,
+  ) => Effect.Effect<{ url: string }, Error>;
+  readonly handleWebhook: (
+    payload: string,
+    signature: string,
+  ) => Effect.Effect<
+    {
+      userId: string;
+      amountCredits: number;
+      customerId: string;
+      email: string;
+    },
+    Error
+  >;
 }
 
 export class StripeService extends Context.Tag("StripeService")<
@@ -15,7 +32,7 @@ export class StripeService extends Context.Tag("StripeService")<
 function makeStripeService(
   apiKey: string,
   webhookSecret: string,
-  appUrl: string
+  appUrl: string,
 ): StripeServiceInterface {
   const stripe = new Stripe(apiKey, {
     apiVersion: "2025-01-27.acacia" as any,
@@ -26,8 +43,8 @@ function makeStripeService(
       Effect.tryPromise({
         try: async () => {
           // 100 credits = £1.00
-          const amountPence = amountCredits; 
-          
+          const amountPence = amountCredits;
+
           const session = await stripe.checkout.sessions.create({
             customer: customerId || undefined,
             payment_method_types: ["card"],
@@ -53,7 +70,8 @@ function makeStripeService(
             },
           });
 
-          if (!session.url) throw new Error("Failed to create checkout session URL");
+          if (!session.url)
+            throw new Error("Failed to create checkout session URL");
           return { url: session.url };
         },
         catch: (error) => new Error(`Stripe error: ${error}`),
@@ -75,7 +93,11 @@ function makeStripeService(
       Effect.tryPromise({
         try: async () => {
           // Use async version for Cloudflare Workers (SubtleCrypto)
-          const event = await stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
+          const event = await stripe.webhooks.constructEventAsync(
+            payload,
+            signature,
+            webhookSecret,
+          );
 
           if (event.type === "checkout.session.completed") {
             const session = event.data.object as Stripe.Checkout.Session;
@@ -86,7 +108,12 @@ function makeStripeService(
 
             if (!userId || !amountCredits || !customerId) {
               // This happens with test triggers that don't have our metadata
-              return { userId: "", amountCredits: 0, customerId: "", email: "" };
+              return {
+                userId: "",
+                amountCredits: 0,
+                customerId: "",
+                email: "",
+              };
             }
 
             return {
@@ -108,7 +135,10 @@ function makeStripeService(
 export function makeStripeServiceLayer(
   apiKey: string,
   webhookSecret: string,
-  appUrl: string
+  appUrl: string,
 ): Layer.Layer<StripeService> {
-  return Layer.succeed(StripeService, makeStripeService(apiKey, webhookSecret, appUrl));
+  return Layer.succeed(
+    StripeService,
+    makeStripeService(apiKey, webhookSecret, appUrl),
+  );
 }

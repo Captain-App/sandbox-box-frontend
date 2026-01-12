@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock cloudflare-specific imports before importing index
 vi.mock("@microlabs/otel-cf-workers", () => ({
   instrument: (handler: any) => ({
-    fetch: (request: Request, env: any, ctx: any) => handler.fetch(request, env, ctx)
+    fetch: (request: Request, env: any, ctx: any) =>
+      handler.fetch(request, env, ctx),
   }),
 }));
 
@@ -38,18 +39,20 @@ describe("Settings Routes", () => {
       SUPABASE_URL: "https://supabase",
       SUPABASE_ANON_KEY: "anon-key",
     };
-    
+
     // Mock global fetch
     vi.stubGlobal("fetch", async (url: string) => {
       if (url.endsWith("/auth/v1/user")) {
-        return new Response(JSON.stringify({ id: "user-123" }), { status: 200 });
+        return new Response(JSON.stringify({ id: "user-123" }), {
+          status: 200,
+        });
       }
       return new Response("Not found", { status: 404 });
     });
   });
 
   const authHeaders = {
-    "Authorization": "Bearer valid-token",
+    Authorization: "Bearer valid-token",
   };
 
   it("GET /settings/api-keys should return null hint for new user", async () => {
@@ -57,11 +60,11 @@ describe("Settings Routes", () => {
       new Request("http://localhost/settings/api-keys", {
         headers: authHeaders,
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.anthropicHint).toBeNull();
   });
 
@@ -72,19 +75,19 @@ describe("Settings Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey: "sk-ant-12345" }),
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    
+
     // Verify hint returned
     const statusRes = await app.fetch(
       new Request("http://localhost/settings/api-keys", {
         headers: authHeaders,
       }),
-      env
+      env,
     );
-    const body = await statusRes.json() as any;
+    const body = (await statusRes.json()) as any;
     expect(body.anthropicHint).toBe("***2345");
   });
 
@@ -95,7 +98,7 @@ describe("Settings Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey: "invalid-key" }),
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(400);
@@ -109,7 +112,7 @@ describe("Settings Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey: "sk-ant-12345" }),
       }),
-      env
+      env,
     );
 
     const res = await app.fetch(
@@ -117,19 +120,19 @@ describe("Settings Routes", () => {
         method: "DELETE",
         headers: authHeaders,
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    
+
     // Verify hint is gone
     const statusRes = await app.fetch(
       new Request("http://localhost/settings/api-keys", {
         headers: authHeaders,
       }),
-      env
+      env,
     );
-    const body = await statusRes.json() as any;
+    const body = (await statusRes.json()) as any;
     expect(body.anthropicHint).toBeNull();
   });
 });

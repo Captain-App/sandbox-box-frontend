@@ -1,21 +1,28 @@
-import { Routes, Route, Link, Navigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Activity, LogOut, Loader2, AlertCircle } from 'lucide-react'
-import { Dashboard } from './pages/Dashboard'
-import { UserPage } from './pages/UserPage'
-import { SessionPage } from './pages/SessionPage'
-import { LoginPage } from './pages/Login'
-import { UserSearch } from './components/UserSearch'
-import { useAuth } from './contexts/AuthContext'
+import { Routes, Route, Link, Navigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Users,
+  Activity,
+  LogOut,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+import { Dashboard } from "./pages/Dashboard";
+import { UserPage } from "./pages/UserPage";
+import { SessionPage } from "./pages/SessionPage";
+import { LoginPage } from "./pages/Login";
+import { UserSearch } from "./components/UserSearch";
+import { useAuth } from "./contexts/AuthContext";
 
 function App() {
-  const { user, isAdmin, loading, signOut } = useAuth()
+  const { user, isAdmin, loading, signOut } = useAuth();
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
-    )
+    );
   }
 
   if (!user) {
@@ -24,7 +31,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-    )
+    );
   }
 
   if (!isAdmin) {
@@ -35,12 +42,15 @@ function App() {
             <AlertCircle className="w-10 h-10 text-red-500" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-black uppercase tracking-tighter text-white">Access Denied</h1>
+            <h1 className="text-2xl font-black uppercase tracking-tighter text-white">
+              Access Denied
+            </h1>
             <p className="text-slate-400 text-sm italic">
-              Authenticated as {user.email}, but the 'admin' role is required to access this portal.
+              Authenticated as {user.email}, but the 'admin' role is required to
+              access this portal.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => signOut()}
             className="w-full py-4 bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-white/10 transition-all"
           >
@@ -48,7 +58,7 @@ function App() {
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -60,20 +70,31 @@ function App() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <span className="font-black text-white">S</span>
             </div>
-            <span className="font-black tracking-tighter text-xl uppercase italic">Shipbox Admin</span>
+            <span className="font-black tracking-tighter text-xl uppercase italic">
+              Shipbox Admin
+            </span>
           </Link>
         </div>
 
         <nav className="flex-1 px-4 py-4 space-y-1">
-          <Link to="/" className="flex items-center gap-3 px-4 py-2 text-sm font-bold rounded-xl bg-white/5 text-white">
+          <Link
+            to="/"
+            className="flex items-center gap-3 px-4 py-2 text-sm font-bold rounded-xl bg-white/5 text-white"
+          >
             <LayoutDashboard className="w-4 h-4" />
             Dashboard
           </Link>
-          <Link to="/users" className="flex items-center gap-3 px-4 py-2 text-sm font-bold rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+          <Link
+            to="/users"
+            className="flex items-center gap-3 px-4 py-2 text-sm font-bold rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
             <Users className="w-4 h-4" />
             Users
           </Link>
-          <Link to="/activity" className="flex items-center gap-3 px-4 py-2 text-sm font-bold rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+          <Link
+            to="/activity"
+            className="flex items-center gap-3 px-4 py-2 text-sm font-bold rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
             <Activity className="w-4 h-4" />
             System Activity
           </Link>
@@ -86,11 +107,15 @@ function App() {
                 <Users className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-white truncate">{user.email?.split('@')[0]}</p>
-                <p className="text-[10px] text-slate-500 truncate uppercase font-black tracking-tighter">Admin Role</p>
+                <p className="text-xs font-bold text-white truncate">
+                  {user.email?.split("@")[0]}
+                </p>
+                <p className="text-[10px] text-slate-500 truncate uppercase font-black tracking-tighter">
+                  Admin Role
+                </p>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => signOut()}
               className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
             >
@@ -117,7 +142,7 @@ function App() {
         </div>
       </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

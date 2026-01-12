@@ -21,7 +21,9 @@ export const adminListTransactionsSchema = z.object({
   offset: z.number().int().min(0).default(0),
   userId: z.string().optional(),
 });
-export type AdminListTransactionsInput = z.infer<typeof adminListTransactionsSchema>;
+export type AdminListTransactionsInput = z.infer<
+  typeof adminListTransactionsSchema
+>;
 
 export const adminGetErrorsSchema = z.object({
   project: z.enum(["api", "engine"]).default("api"),
@@ -35,22 +37,30 @@ export const adminListR2SessionsSchema = z.object({
   limit: z.number().int().min(1).max(500).default(100),
   offset: z.number().int().min(0).default(0),
 });
-export type AdminListR2SessionsInput = z.infer<typeof adminListR2SessionsSchema>;
+export type AdminListR2SessionsInput = z.infer<
+  typeof adminListR2SessionsSchema
+>;
 
 export const adminGetSessionLogsSchema = z.object({
   sessionId: z.string().length(8),
 });
-export type AdminGetSessionLogsInput = z.infer<typeof adminGetSessionLogsSchema>;
+export type AdminGetSessionLogsInput = z.infer<
+  typeof adminGetSessionLogsSchema
+>;
 
 export const adminGetSessionMetadataSchema = z.object({
   sessionId: z.string().length(8),
 });
-export type AdminGetSessionMetadataInput = z.infer<typeof adminGetSessionMetadataSchema>;
+export type AdminGetSessionMetadataInput = z.infer<
+  typeof adminGetSessionMetadataSchema
+>;
 
 export const adminListRecentTracesSchema = z.object({
   limit: z.number().int().min(1).max(50).default(10),
 });
-export type AdminListRecentTracesInput = z.infer<typeof adminListRecentTracesSchema>;
+export type AdminListRecentTracesInput = z.infer<
+  typeof adminListRecentTracesSchema
+>;
 
 export const adminGetTraceSchema = z.object({
   traceId: z.string(),
@@ -60,7 +70,9 @@ export type AdminGetTraceInput = z.infer<typeof adminGetTraceSchema>;
 export const adminGetSessionTracesSchema = z.object({
   sessionId: z.string(),
 });
-export type AdminGetSessionTracesInput = z.infer<typeof adminGetSessionTracesSchema>;
+export type AdminGetSessionTracesInput = z.infer<
+  typeof adminGetSessionTracesSchema
+>;
 
 export const adminGetAuthTokenSchema = z.object({});
 export type AdminGetAuthTokenInput = z.infer<typeof adminGetAuthTokenSchema>;

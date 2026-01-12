@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock cloudflare-specific imports before importing index
 vi.mock("@microlabs/otel-cf-workers", () => ({
   instrument: (handler: any) => ({
-    fetch: (request: Request, env: any, ctx: any) => handler.fetch(request, env, ctx)
+    fetch: (request: Request, env: any, ctx: any) =>
+      handler.fetch(request, env, ctx),
   }),
 }));
 
@@ -50,18 +51,20 @@ describe("Billing Routes", () => {
       SUPABASE_URL: "https://supabase",
       SUPABASE_ANON_KEY: "anon-key",
     };
-    
+
     // Mock global fetch for Supabase auth
     vi.stubGlobal("fetch", async (url: string) => {
       if (url.endsWith("/auth/v1/user")) {
-        return new Response(JSON.stringify({ id: "user-123" }), { status: 200 });
+        return new Response(JSON.stringify({ id: "user-123" }), {
+          status: 200,
+        });
       }
       return new Response("Not found", { status: 404 });
     });
   });
 
   const authHeaders = {
-    "Authorization": "Bearer valid-token",
+    Authorization: "Bearer valid-token",
   };
 
   it("GET /billing/balance should return user balance", async () => {
@@ -69,16 +72,18 @@ describe("Billing Routes", () => {
       new Request("http://localhost/billing/balance", {
         headers: authHeaders,
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.balanceCredits).toBe(1000);
   });
 
   it("POST /billing/checkout should create stripe session", async () => {
-    mockStripe.checkout.sessions.create.mockResolvedValue({ url: "https://pay.stripe.com/123" });
+    mockStripe.checkout.sessions.create.mockResolvedValue({
+      url: "https://pay.stripe.com/123",
+    });
 
     const res = await app.fetch(
       new Request("http://localhost/billing/checkout", {
@@ -86,11 +91,11 @@ describe("Billing Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ amountCredits: 1000 }),
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.url).toBe("https://pay.stripe.com/123");
   });
 
@@ -101,7 +106,7 @@ describe("Billing Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ amountCredits: 100 }),
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(400);
@@ -130,19 +135,19 @@ describe("Billing Routes", () => {
         headers: { "stripe-signature": "valid-sig" },
         body: "payload",
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    
+
     // Verify balance increased
     const balanceRes = await app.fetch(
       new Request("http://localhost/billing/balance", {
         headers: authHeaders,
       }),
-      env
+      env,
     );
-    const balance = await balanceRes.json() as any;
+    const balance = (await balanceRes.json()) as any;
     expect(Number(balance.balanceCredits)).toBe(6000);
   });
 });

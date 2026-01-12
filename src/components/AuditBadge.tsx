@@ -1,4 +1,4 @@
-import { ShieldAlert } from "lucide-react"
+import { ShieldAlert } from "lucide-react";
 
 export function AuditBadge() {
   return (
@@ -15,8 +15,5 @@ export function AuditBadge() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-
-

@@ -10,6 +10,7 @@ Shipbox operates on a credits-first metering system. No surprises, no runaway co
 ### Credit Balance
 
 Your balance is shown in GBP. Credits are consumed based on:
+
 - **Compute Time**: Active time for your sandboxes (typically 1 credit per minute).
 - **AI Usage**: Token-based pricing if you are not using a BYOK (Bring Your Own Key) setup.
 - **Capability Purchases**: Premium tools or modules.

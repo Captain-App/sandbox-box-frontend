@@ -37,7 +37,7 @@ describe("GitHubService", () => {
     });
 
     const result = await Effect.runPromise(Effect.provide(program, layer));
-    
+
     expect(Option.isSome(result)).toBe(true);
     expect(result.value.installationId).toBe(456);
     expect(result.value.accountLogin).toBe("crew");
@@ -55,15 +55,19 @@ describe("GitHubService", () => {
 
   it("should get an installation token", async () => {
     // 1. Seed installation
-    (mockD1 as any)._store.set("github_installations", [{
-      user_id: userId,
-      installation_id: 456,
-      account_login: "crew",
-      account_type: "User",
-    }]);
+    (mockD1 as any)._store.set("github_installations", [
+      {
+        user_id: userId,
+        installation_id: 456,
+        account_login: "crew",
+        account_type: "User",
+      },
+    ]);
 
     // 2. Mock fetch for access token
-    vi.mocked(global.fetch).mockResolvedValue(new Response(JSON.stringify({ token: "gh-token-123" }), { status: 200 }));
+    vi.mocked(global.fetch).mockResolvedValue(
+      new Response(JSON.stringify({ token: "gh-token-123" }), { status: 200 }),
+    );
 
     const program = Effect.gen(function* () {
       const service = yield* GitHubService;
@@ -74,7 +78,7 @@ describe("GitHubService", () => {
     expect(result).toBe("gh-token-123");
     expect(global.fetch).toHaveBeenCalledWith(
       "https://api.github.com/app/installations/456/access_tokens",
-      expect.objectContaining({ method: "POST" })
+      expect.objectContaining({ method: "POST" }),
     );
   });
 
@@ -90,10 +94,12 @@ describe("GitHubService", () => {
 
   it("should delete an installation", async () => {
     // Seed
-    (mockD1 as any)._store.set("github_installations", [{
-      user_id: userId,
-      installation_id: 456,
-    }]);
+    (mockD1 as any)._store.set("github_installations", [
+      {
+        user_id: userId,
+        installation_id: 456,
+      },
+    ]);
 
     const program = Effect.gen(function* () {
       const service = yield* GitHubService;

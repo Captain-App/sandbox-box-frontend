@@ -11,10 +11,22 @@ export interface BoxSecret {
 
 export interface BoxSecretsServiceInterface {
   readonly listSecrets: (userId: string) => Effect.Effect<BoxSecret[], Error>;
-  readonly createSecret: (userId: string, name: string, value: string) => Effect.Effect<BoxSecret, Error>;
-  readonly deleteSecret: (userId: string, secretId: string) => Effect.Effect<void, Error>;
-  readonly getSecretValue: (userId: string, secretId: string) => Effect.Effect<Option.Option<string>, Error>;
-  readonly getFullSecrets: (userId: string) => Effect.Effect<Record<string, string>, Error>;
+  readonly createSecret: (
+    userId: string,
+    name: string,
+    value: string,
+  ) => Effect.Effect<BoxSecret, Error>;
+  readonly deleteSecret: (
+    userId: string,
+    secretId: string,
+  ) => Effect.Effect<void, Error>;
+  readonly getSecretValue: (
+    userId: string,
+    secretId: string,
+  ) => Effect.Effect<Option.Option<string>, Error>;
+  readonly getFullSecrets: (
+    userId: string,
+  ) => Effect.Effect<Record<string, string>, Error>;
 }
 
 export class BoxSecretsService extends Context.Tag("BoxSecretsService")<
@@ -22,7 +34,10 @@ export class BoxSecretsService extends Context.Tag("BoxSecretsService")<
   BoxSecretsServiceInterface
 >() {}
 
-function makeD1BoxSecretsService(db: D1Database, masterKey: string): BoxSecretsServiceInterface {
+function makeD1BoxSecretsService(
+  db: D1Database,
+  masterKey: string,
+): BoxSecretsServiceInterface {
   const getMasterKey = async () => {
     const encoder = new TextEncoder();
     return await crypto.subtle.importKey(
@@ -30,7 +45,7 @@ function makeD1BoxSecretsService(db: D1Database, masterKey: string): BoxSecretsS
       encoder.encode(masterKey.padEnd(32, "0").slice(0, 32)),
       { name: "AES-GCM" },
       false,
-      ["encrypt", "decrypt"]
+      ["encrypt", "decrypt"],
     );
   };
 
@@ -39,7 +54,11 @@ function makeD1BoxSecretsService(db: D1Database, masterKey: string): BoxSecretsS
     const data = encoder.encode(text);
     const key = await getMasterKey();
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data);
+    const encrypted = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      key,
+      data,
+    );
     const combined = new Uint8Array(iv.length + encrypted.byteLength);
     combined.set(iv);
     combined.set(new Uint8Array(encrypted), iv.length);
@@ -47,11 +66,19 @@ function makeD1BoxSecretsService(db: D1Database, masterKey: string): BoxSecretsS
   };
 
   const decrypt = async (base64: string) => {
-    const combined = new Uint8Array(atob(base64).split("").map((c) => c.charCodeAt(0)));
+    const combined = new Uint8Array(
+      atob(base64)
+        .split("")
+        .map((c) => c.charCodeAt(0)),
+    );
     const iv = combined.slice(0, 12);
     const data = combined.slice(12);
     const key = await getMasterKey();
-    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
+    const decrypted = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      key,
+      data,
+    );
     return new TextDecoder().decode(decrypted);
   };
 
@@ -60,7 +87,9 @@ function makeD1BoxSecretsService(db: D1Database, masterKey: string): BoxSecretsS
       Effect.tryPromise({
         try: async () => {
           const { results } = await db
-            .prepare("SELECT id, user_id, name, hint, created_at, last_used FROM user_box_secrets WHERE user_id = ? ORDER BY created_at DESC")
+            .prepare(
+              "SELECT id, user_id, name, hint, created_at, last_used FROM user_box_secrets WHERE user_id = ? ORDER BY created_at DESC",
+            )
             .bind(userId)
             .all();
 
@@ -86,7 +115,7 @@ function makeD1BoxSecretsService(db: D1Database, masterKey: string): BoxSecretsS
 
           await db
             .prepare(
-              "INSERT INTO user_box_secrets (id, user_id, name, encrypted_value, hint, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+              "INSERT INTO user_box_secrets (id, user_id, name, encrypted_value, hint, created_at) VALUES (?, ?, ?, ?, ?, ?)",
             )
             .bind(id, userId, name, encrypted, hint, now)
             .run();
@@ -106,7 +135,9 @@ function makeD1BoxSecretsService(db: D1Database, masterKey: string): BoxSecretsS
       Effect.tryPromise({
         try: async () => {
           await db
-            .prepare("DELETE FROM user_box_secrets WHERE user_id = ? AND id = ?")
+            .prepare(
+              "DELETE FROM user_box_secrets WHERE user_id = ? AND id = ?",
+            )
             .bind(userId, secretId)
             .run();
         },
@@ -117,14 +148,16 @@ function makeD1BoxSecretsService(db: D1Database, masterKey: string): BoxSecretsS
       Effect.tryPromise({
         try: async () => {
           const result = await db
-            .prepare("SELECT encrypted_value FROM user_box_secrets WHERE user_id = ? AND id = ?")
+            .prepare(
+              "SELECT encrypted_value FROM user_box_secrets WHERE user_id = ? AND id = ?",
+            )
             .bind(userId, secretId)
             .first();
 
           if (!result || !result.encrypted_value) return Option.none();
 
           const decrypted = await decrypt(result.encrypted_value as string);
-          
+
           // Update last used
           const now = Math.floor(Date.now() / 1000);
           await db
@@ -139,6 +172,12 @@ function makeD1BoxSecretsService(db: D1Database, masterKey: string): BoxSecretsS
   };
 }
 
-export function makeBoxSecretsServiceLayer(db: D1Database, masterKey: string): Layer.Layer<BoxSecretsService> {
-  return Layer.succeed(BoxSecretsService, makeD1BoxSecretsService(db, masterKey));
+export function makeBoxSecretsServiceLayer(
+  db: D1Database,
+  masterKey: string,
+): Layer.Layer<BoxSecretsService> {
+  return Layer.succeed(
+    BoxSecretsService,
+    makeD1BoxSecretsService(db, masterKey),
+  );
 }

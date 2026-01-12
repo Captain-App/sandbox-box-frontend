@@ -1,4 +1,4 @@
-import Conf from 'conf';
+import Conf from "conf";
 
 export interface Config {
   apiKey?: string;
@@ -7,23 +7,27 @@ export interface Config {
 
 const schema = {
   apiKey: {
-    type: 'string',
+    type: "string",
   },
   baseUrl: {
-    type: 'string',
-    default: 'https://backend.shipbox.dev',
+    type: "string",
+    default: "https://backend.shipbox.dev",
   },
 } as const;
 
 export const configStore = new Conf<Config>({
-  projectName: 'shipbox',
+  projectName: "shipbox",
   schema,
 });
 
 export function getApiKey(): string | undefined {
-  return process.env.SHIPBOX_API_KEY || configStore.get('apiKey');
+  return process.env.SHIPBOX_API_KEY || configStore.get("apiKey");
 }
 
 export function getBaseUrl(): string {
-  return process.env.SHIPBOX_BASE_URL || configStore.get('baseUrl') || 'https://backend.shipbox.dev';
+  return (
+    process.env.SHIPBOX_BASE_URL ||
+    configStore.get("baseUrl") ||
+    "https://backend.shipbox.dev"
+  );
 }

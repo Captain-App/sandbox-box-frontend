@@ -1,14 +1,14 @@
-import React, { useState, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
-import { Box, Lock, Mail } from 'lucide-react';
+import React, { useState, useRef } from "react";
+import { supabase } from "../lib/supabase";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Box, Lock, Mail } from "lucide-react";
 
 export function AuthPage() {
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [error, setError] = useState<string | null>(null);
-  
+
   // Use refs for uncontrolled inputs - more AI/automation friendly
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -18,17 +18,20 @@ export function AuthPage() {
     setLoading(true);
     setError(null);
 
-    const email = emailRef.current?.value || '';
-    const password = passwordRef.current?.value || '';
+    const email = emailRef.current?.value || "";
+    const password = passwordRef.current?.value || "";
 
     try {
-      if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (mode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
         if (error) throw error;
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        alert('Check your email for the confirmation link!');
+        alert("Check your email for the confirmation link!");
       }
     } catch (err: any) {
       setError(err.message);
@@ -48,15 +51,29 @@ export function AuthPage() {
             Shipbox
           </h1>
           <p className="text-muted-foreground text-xs md:text-sm mt-2">
-            {mode === 'login' ? 'Welcome back, Architect' : 'Join the construction'}
+            {mode === "login"
+              ? "Welcome back, Architect"
+              : "Join the construction"}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4" aria-label="Authentication form">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+          aria-label="Authentication form"
+        >
           <div className="space-y-2">
-            <label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email</label>
+            <label
+              htmlFor="email"
+              className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+            >
+              Email
+            </label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              <Mail
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                aria-hidden="true"
+              />
               <input
                 ref={emailRef}
                 id="email"
@@ -73,15 +90,25 @@ export function AuthPage() {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Password</label>
+            <label
+              htmlFor="password"
+              className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+            >
+              Password
+            </label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              <Lock
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                aria-hidden="true"
+              />
               <input
                 ref={passwordRef}
                 id="password"
                 name="password"
                 type="password"
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
                 required
                 aria-required="true"
                 aria-label="Password"
@@ -92,20 +119,32 @@ export function AuthPage() {
           </div>
 
           {error && (
-            <p className="text-red-500 text-xs font-bold text-center mt-2">{error}</p>
+            <p className="text-red-500 text-xs font-bold text-center mt-2">
+              {error}
+            </p>
           )}
 
-          <Button type="submit" className="w-full py-6 mt-4 uppercase tracking-widest" disabled={loading}>
-            {loading ? 'Processing...' : mode === 'login' ? 'Enter the Castle' : 'Sign Up'}
+          <Button
+            type="submit"
+            className="w-full py-6 mt-4 uppercase tracking-widest"
+            disabled={loading}
+          >
+            {loading
+              ? "Processing..."
+              : mode === "login"
+                ? "Enter the Castle"
+                : "Sign Up"}
           </Button>
         </form>
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+            onClick={() => setMode(mode === "login" ? "signup" : "login")}
             className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
           >
-            {mode === 'login' ? "Don't have an account? Sign Up" : 'Already have an account? Login'}
+            {mode === "login"
+              ? "Don't have an account? Sign Up"
+              : "Already have an account? Login"}
           </button>
         </div>
       </Card>

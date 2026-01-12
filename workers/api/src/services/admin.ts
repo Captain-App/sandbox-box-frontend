@@ -49,11 +49,26 @@ export interface AdminSession {
 
 export interface AdminServiceInterface {
   readonly getStats: () => Effect.Effect<AdminStats, SessionStorageError>;
-  readonly listUsers: (limit: number, offset: number) => Effect.Effect<AdminUser[], SessionStorageError>;
-  readonly searchUsers: (query: string) => Effect.Effect<AdminUser[], SessionStorageError>;
-  readonly getUserDetails: (userId: string) => Effect.Effect<AdminUserDetails, SessionStorageError>;
-  readonly listSessions: (limit: number, offset: number, status?: string) => Effect.Effect<AdminSession[], SessionStorageError>;
-  readonly listTransactions: (limit: number, offset: number, userId?: string) => Effect.Effect<any[], SessionStorageError>;
+  readonly listUsers: (
+    limit: number,
+    offset: number,
+  ) => Effect.Effect<AdminUser[], SessionStorageError>;
+  readonly searchUsers: (
+    query: string,
+  ) => Effect.Effect<AdminUser[], SessionStorageError>;
+  readonly getUserDetails: (
+    userId: string,
+  ) => Effect.Effect<AdminUserDetails, SessionStorageError>;
+  readonly listSessions: (
+    limit: number,
+    offset: number,
+    status?: string,
+  ) => Effect.Effect<AdminSession[], SessionStorageError>;
+  readonly listTransactions: (
+    limit: number,
+    offset: number,
+    userId?: string,
+  ) => Effect.Effect<any[], SessionStorageError>;
 }
 
 export class AdminService extends Context.Tag("AdminService")<
@@ -71,30 +86,43 @@ function makeD1AdminService(db: D1Database): AdminServiceInterface {
 
           const stats = await db.batch([
             db.prepare("SELECT COUNT(*) as count FROM user_balances"),
-            db.prepare("SELECT COUNT(DISTINCT user_id) as count FROM transactions WHERE created_at >= ?").bind(oneDayAgo),
+            db
+              .prepare(
+                "SELECT COUNT(DISTINCT user_id) as count FROM transactions WHERE created_at >= ?",
+              )
+              .bind(oneDayAgo),
             db.prepare("SELECT COUNT(*) as count FROM user_sessions"),
-            db.prepare("SELECT SUM(amount_credits) as total FROM transactions WHERE amount_credits > 0 AND type = 'top-up'"),
-            db.prepare("SELECT SUM(amount_credits) as total FROM transactions WHERE amount_credits > 0 AND type = 'top-up' AND created_at >= ?").bind(oneDayAgo),
+            db.prepare(
+              "SELECT SUM(amount_credits) as total FROM transactions WHERE amount_credits > 0 AND type = 'top-up'",
+            ),
+            db
+              .prepare(
+                "SELECT SUM(amount_credits) as total FROM transactions WHERE amount_credits > 0 AND type = 'top-up' AND created_at >= ?",
+              )
+              .bind(oneDayAgo),
           ]);
 
           return {
             totalUsers: (stats[0].results[0]?.count as number) || 0,
             activeUsers24h: (stats[1].results[0]?.count as number) || 0,
             totalSessions: (stats[2].results[0]?.count as number) || 0,
-            activeSessions: 0, 
+            activeSessions: 0,
             totalRevenue: Math.abs((stats[3].results[0]?.total as number) || 0),
             revenueToday: Math.abs((stats[4].results[0]?.total as number) || 0),
           };
         },
-        catch: (error) => new SessionStorageError({ 
-          cause: error instanceof Error ? error.message : String(error) 
-        }),
+        catch: (error) =>
+          new SessionStorageError({
+            cause: error instanceof Error ? error.message : String(error),
+          }),
       }),
 
     listUsers: (limit, offset) =>
       Effect.tryPromise({
         try: async () => {
-          const { results } = await db.prepare(`
+          const { results } = await db
+            .prepare(
+              `
             SELECT 
               ub.user_id, 
               ub.balance_credits, 
@@ -107,7 +135,10 @@ function makeD1AdminService(db: D1Database): AdminServiceInterface {
             GROUP BY ub.user_id
             ORDER BY last_activity DESC NULLS LAST
             LIMIT ? OFFSET ?
-          `).bind(limit, offset).all();
+          `,
+            )
+            .bind(limit, offset)
+            .all();
 
           return results.map((r: any) => ({
             userId: r.user_id,
@@ -117,9 +148,10 @@ function makeD1AdminService(db: D1Database): AdminServiceInterface {
             lastActivity: r.last_activity || 0,
           }));
         },
-        catch: (error) => new SessionStorageError({ 
-          cause: error instanceof Error ? error.message : String(error) 
-        }),
+        catch: (error) =>
+          new SessionStorageError({
+            cause: error instanceof Error ? error.message : String(error),
+          }),
       }),
 
     searchUsers: (query) =>
@@ -141,7 +173,10 @@ function makeD1AdminService(db: D1Database): AdminServiceInterface {
             LIMIT 20
           `;
           const pattern = `%${query}%`;
-          const { results } = await db.prepare(sqlQuery).bind(pattern, pattern).all();
+          const { results } = await db
+            .prepare(sqlQuery)
+            .bind(pattern, pattern)
+            .all();
 
           return results.map((r: any) => ({
             userId: r.user_id,
@@ -151,21 +186,39 @@ function makeD1AdminService(db: D1Database): AdminServiceInterface {
             lastActivity: r.last_activity || 0,
           }));
         },
-        catch: (error) => new SessionStorageError({ 
-          cause: error instanceof Error ? error.message : String(error) 
-        }),
+        catch: (error) =>
+          new SessionStorageError({
+            cause: error instanceof Error ? error.message : String(error),
+          }),
       }),
 
     getUserDetails: (userId) =>
       Effect.tryPromise({
         try: async () => {
-          const [balanceRes, githubRes, secretsRes, keysRes, sessionsRes] = await db.batch([
-            db.prepare("SELECT * FROM user_balances WHERE user_id = ?").bind(userId),
-            db.prepare("SELECT * FROM github_installations WHERE user_id = ?").bind(userId),
-            db.prepare("SELECT id, name, hint, created_at FROM user_box_secrets WHERE user_id = ?").bind(userId),
-            db.prepare("SELECT name, key_hint, created_at FROM user_shipbox_api_keys WHERE user_id = ?").bind(userId),
-            db.prepare("SELECT user_id, session_id, created_at FROM user_sessions WHERE user_id = ? ORDER BY created_at DESC").bind(userId),
-          ]);
+          const [balanceRes, githubRes, secretsRes, keysRes, sessionsRes] =
+            await db.batch([
+              db
+                .prepare("SELECT * FROM user_balances WHERE user_id = ?")
+                .bind(userId),
+              db
+                .prepare("SELECT * FROM github_installations WHERE user_id = ?")
+                .bind(userId),
+              db
+                .prepare(
+                  "SELECT id, name, hint, created_at FROM user_box_secrets WHERE user_id = ?",
+                )
+                .bind(userId),
+              db
+                .prepare(
+                  "SELECT name, key_hint, created_at FROM user_shipbox_api_keys WHERE user_id = ?",
+                )
+                .bind(userId),
+              db
+                .prepare(
+                  "SELECT user_id, session_id, created_at FROM user_sessions WHERE user_id = ? ORDER BY created_at DESC",
+                )
+                .bind(userId),
+            ]);
 
           const balance = balanceRes.results[0] as any;
           if (!balance) {
@@ -183,18 +236,20 @@ function makeD1AdminService(db: D1Database): AdminServiceInterface {
             balanceCredits: balance.balance_credits,
             sessionCount: stats?.count || 0,
             lastActivity: stats?.last_activity || 0,
-            githubInstallation: github ? {
-              installationId: github.installation_id,
-              accountLogin: github.account_login,
-              accountType: github.account_type,
-            } : undefined,
-            boxSecrets: secrets.map(s => ({
+            githubInstallation: github
+              ? {
+                  installationId: github.installation_id,
+                  accountLogin: github.account_login,
+                  accountType: github.account_type,
+                }
+              : undefined,
+            boxSecrets: secrets.map((s) => ({
               id: s.id,
               name: s.name,
               hint: s.hint,
               createdAt: s.created_at,
             })),
-            apiKeys: keys.map(k => ({
+            apiKeys: keys.map((k) => ({
               name: k.name,
               keyHint: k.key_hint,
               createdAt: k.created_at,
@@ -208,20 +263,25 @@ function makeD1AdminService(db: D1Database): AdminServiceInterface {
             })),
           };
         },
-        catch: (error) => new SessionStorageError({ 
-          cause: error instanceof Error ? error.message : String(error) 
-        }),
+        catch: (error) =>
+          new SessionStorageError({
+            cause: error instanceof Error ? error.message : String(error),
+          }),
       }),
 
     listSessions: (limit, offset, status) =>
       Effect.tryPromise({
         try: async () => {
-          let query = "SELECT user_id, session_id, created_at FROM user_sessions";
+          let query =
+            "SELECT user_id, session_id, created_at FROM user_sessions";
           let params: any[] = [];
           query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
           params.push(limit, offset);
 
-          const { results } = await db.prepare(query).bind(...params).all();
+          const { results } = await db
+            .prepare(query)
+            .bind(...params)
+            .all();
 
           return results.map((r: any) => ({
             sessionId: r.session_id,
@@ -231,9 +291,10 @@ function makeD1AdminService(db: D1Database): AdminServiceInterface {
             lastActivity: r.created_at,
           }));
         },
-        catch: (error) => new SessionStorageError({ 
-          cause: error instanceof Error ? error.message : String(error) 
-        }),
+        catch: (error) =>
+          new SessionStorageError({
+            cause: error instanceof Error ? error.message : String(error),
+          }),
       }),
 
     listTransactions: (limit, offset, userId) =>
@@ -250,16 +311,22 @@ function makeD1AdminService(db: D1Database): AdminServiceInterface {
           query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
           params.push(limit, offset);
 
-          const { results } = await db.prepare(query).bind(...params).all();
+          const { results } = await db
+            .prepare(query)
+            .bind(...params)
+            .all();
           return results;
         },
-        catch: (error) => new SessionStorageError({ 
-          cause: error instanceof Error ? error.message : String(error) 
-        }),
+        catch: (error) =>
+          new SessionStorageError({
+            cause: error instanceof Error ? error.message : String(error),
+          }),
       }),
   };
 }
 
-export function makeAdminServiceLayer(db: D1Database): Layer.Layer<AdminService> {
+export function makeAdminServiceLayer(
+  db: D1Database,
+): Layer.Layer<AdminService> {
   return Layer.succeed(AdminService, makeD1AdminService(db));
 }

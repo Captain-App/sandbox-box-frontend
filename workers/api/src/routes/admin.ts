@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { Effect, pipe } from "effect";
 import { AdminService, makeAdminServiceLayer } from "../services/admin";
-import { HoneycombService, makeHoneycombServiceLayer } from "../services/honeycomb";
+import {
+  HoneycombService,
+  makeHoneycombServiceLayer,
+} from "../services/honeycomb";
 import { adminAuth } from "../middleware/admin";
 import { LoggerLayer, withRequestContext, withSentry } from "@shipbox/shared";
 import * as Sentry from "@sentry/cloudflare";
@@ -22,8 +25,8 @@ adminRoutes.get("/stats", async (c) => {
       Effect.provide(makeAdminServiceLayer(c.env.DB)),
       withRequestContext(requestId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (result._tag === "Failure") {
@@ -47,8 +50,8 @@ adminRoutes.get("/users", async (c) => {
       Effect.provide(makeAdminServiceLayer(c.env.DB)),
       withRequestContext(requestId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (result._tag === "Failure") {
@@ -71,8 +74,8 @@ adminRoutes.get("/users/search", async (c) => {
       Effect.provide(makeAdminServiceLayer(c.env.DB)),
       withRequestContext(requestId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (result._tag === "Failure") {
@@ -95,8 +98,8 @@ adminRoutes.get("/users/:userId", async (c) => {
       Effect.provide(makeAdminServiceLayer(c.env.DB)),
       withRequestContext(requestId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (result._tag === "Failure") {
@@ -121,8 +124,8 @@ adminRoutes.get("/sessions", async (c) => {
       Effect.provide(makeAdminServiceLayer(c.env.DB)),
       withRequestContext(requestId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (result._tag === "Failure") {
@@ -137,9 +140,12 @@ adminRoutes.get("/sessions/:sessionId/logs", async (c) => {
   const requestId = c.get("requestId") || crypto.randomUUID();
 
   try {
-    const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${sessionId}/logs`, {
-      headers: { "X-Request-Id": requestId }
-    });
+    const res = await c.env.SANDBOX_MCP.fetch(
+      `http://sandbox/internal/sessions/${sessionId}/logs`,
+      {
+        headers: { "X-Request-Id": requestId },
+      },
+    );
     if (!res.ok) return c.json({ error: "Failed to fetch logs" }, res.status);
     const data = await res.json();
     return c.json(data);
@@ -153,10 +159,14 @@ adminRoutes.get("/sessions/:sessionId/metadata", async (c) => {
   const requestId = c.get("requestId") || crypto.randomUUID();
 
   try {
-    const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${sessionId}`, {
-      headers: { "X-Request-Id": requestId }
-    });
-    if (!res.ok) return c.json({ error: "Failed to fetch metadata" }, res.status);
+    const res = await c.env.SANDBOX_MCP.fetch(
+      `http://sandbox/internal/sessions/${sessionId}`,
+      {
+        headers: { "X-Request-Id": requestId },
+      },
+    );
+    if (!res.ok)
+      return c.json({ error: "Failed to fetch metadata" }, res.status);
     const data = await res.json();
     return c.json(data);
   } catch (e) {
@@ -179,8 +189,8 @@ adminRoutes.get("/transactions", async (c) => {
       Effect.provide(makeAdminServiceLayer(c.env.DB)),
       withRequestContext(requestId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (result._tag === "Failure") {
@@ -204,11 +214,16 @@ adminRoutes.get("/traces/recent", async (c) => {
         const service = yield* HoneycombService;
         return yield* service.listRecentTraces(limit);
       }),
-      Effect.provide(makeHoneycombServiceLayer(c.env.HONEYCOMB_API_KEY, c.env.HONEYCOMB_DATASET)),
+      Effect.provide(
+        makeHoneycombServiceLayer(
+          c.env.HONEYCOMB_API_KEY,
+          c.env.HONEYCOMB_DATASET,
+        ),
+      ),
       withRequestContext(requestId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (result._tag === "Failure") {
@@ -232,11 +247,16 @@ adminRoutes.get("/traces/:traceId", async (c) => {
         const service = yield* HoneycombService;
         return yield* service.getTraceDetails(traceId);
       }),
-      Effect.provide(makeHoneycombServiceLayer(c.env.HONEYCOMB_API_KEY, c.env.HONEYCOMB_DATASET)),
+      Effect.provide(
+        makeHoneycombServiceLayer(
+          c.env.HONEYCOMB_API_KEY,
+          c.env.HONEYCOMB_DATASET,
+        ),
+      ),
       withRequestContext(requestId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (result._tag === "Failure") {
@@ -260,11 +280,16 @@ adminRoutes.get("/traces/session/:sessionId", async (c) => {
         const service = yield* HoneycombService;
         return yield* service.getSessionTraces(sessionId);
       }),
-      Effect.provide(makeHoneycombServiceLayer(c.env.HONEYCOMB_API_KEY, c.env.HONEYCOMB_DATASET)),
+      Effect.provide(
+        makeHoneycombServiceLayer(
+          c.env.HONEYCOMB_API_KEY,
+          c.env.HONEYCOMB_DATASET,
+        ),
+      ),
       withRequestContext(requestId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   if (result._tag === "Failure") {
@@ -278,16 +303,24 @@ adminRoutes.get("/auth/token", async (c) => {
   const adminEmail = c.env.ADMIN_USER_EMAIL || "admin@captainapp.co.uk";
   const adminPassword = c.env.ADMIN_PASSWORD;
 
-  if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY || !adminPassword) {
+  if (
+    !c.env.SUPABASE_URL ||
+    !c.env.SUPABASE_SERVICE_ROLE_KEY ||
+    !adminPassword
+  ) {
     return c.json({ error: "Auth integration not configured" }, 500);
   }
 
-  const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
+  const supabase = createClient(
+    c.env.SUPABASE_URL,
+    c.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    },
+  );
 
   // 1. Try to sign in
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -298,29 +331,37 @@ adminRoutes.get("/auth/token", async (c) => {
   if (error) {
     // 2. If user doesn't exist, try to create it
     if (error.message.includes("Invalid login credentials")) {
-      const { data: createData, error: createError } = await supabase.auth.admin.createUser({
-        email: adminEmail,
-        password: adminPassword,
-        email_confirm: true
-      });
+      const { data: createData, error: createError } =
+        await supabase.auth.admin.createUser({
+          email: adminEmail,
+          password: adminPassword,
+          email_confirm: true,
+        });
 
       if (createError) {
-        return c.json({ error: `Failed to create admin user: ${createError.message}` }, 500);
+        return c.json(
+          { error: `Failed to create admin user: ${createError.message}` },
+          500,
+        );
       }
 
       // Sign in again after creation
-      const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-        email: adminEmail,
-        password: adminPassword,
-      });
+      const { data: retryData, error: retryError } =
+        await supabase.auth.signInWithPassword({
+          email: adminEmail,
+          password: adminPassword,
+        });
 
       if (retryError) {
-        return c.json({ error: `Failed to sign in after creation: ${retryError.message}` }, 500);
+        return c.json(
+          { error: `Failed to sign in after creation: ${retryError.message}` },
+          500,
+        );
       }
 
       return c.json({
         accessToken: retryData.session?.access_token,
-        user: retryData.user
+        user: retryData.user,
       });
     }
 
@@ -329,7 +370,7 @@ adminRoutes.get("/auth/token", async (c) => {
 
   return c.json({
     accessToken: data.session?.access_token,
-    user: data.user
+    user: data.user,
   });
 });
 

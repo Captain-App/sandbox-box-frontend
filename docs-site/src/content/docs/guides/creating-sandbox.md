@@ -16,7 +16,9 @@ Creating a new sandbox is the first step to giving your agent a workspace.
 ## Regional Availability
 
 Shipbox currently supports the following regions:
+
 - `lhr`: London, UK
 - `sfo`: San Francisco, US
 - `hkg`: Hong Kong, HK
+
 ---

@@ -3,11 +3,24 @@ import * as jose from "jose";
 import { GithubError, type GitHubInstallation } from "@shipbox/shared";
 
 export interface GitHubServiceInterface {
-  readonly getInstallation: (userId: string) => Effect.Effect<Option.Option<GitHubInstallation>, GithubError>;
-  readonly storeInstallation: (installation: GitHubInstallation) => Effect.Effect<void, GithubError>;
-  readonly deleteInstallation: (userId: string) => Effect.Effect<void, GithubError>;
-  readonly getInstallationToken: (userId: string) => Effect.Effect<string, GithubError>;
-  readonly fetchInstallationMetadata: (installationId: number) => Effect.Effect<{ accountLogin: string; accountType: string }, GithubError>;
+  readonly getInstallation: (
+    userId: string,
+  ) => Effect.Effect<Option.Option<GitHubInstallation>, GithubError>;
+  readonly storeInstallation: (
+    installation: GitHubInstallation,
+  ) => Effect.Effect<void, GithubError>;
+  readonly deleteInstallation: (
+    userId: string,
+  ) => Effect.Effect<void, GithubError>;
+  readonly getInstallationToken: (
+    userId: string,
+  ) => Effect.Effect<string, GithubError>;
+  readonly fetchInstallationMetadata: (
+    installationId: number,
+  ) => Effect.Effect<
+    { accountLogin: string; accountType: string },
+    GithubError
+  >;
 }
 
 export class GitHubService extends Context.Tag("GitHubService")<
@@ -18,7 +31,7 @@ export class GitHubService extends Context.Tag("GitHubService")<
 function makeD1GitHubService(
   db: D1Database,
   appId: string,
-  privateKey: string
+  privateKey: string,
 ): GitHubServiceInterface {
   const getAppJwt = async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -69,14 +82,14 @@ function makeD1GitHubService(
                installation_id = excluded.installation_id,
                account_login = excluded.account_login,
                account_type = excluded.account_type,
-               created_at = excluded.created_at`
+               created_at = excluded.created_at`,
             )
             .bind(
               installation.userId,
               installation.installationId,
               installation.accountLogin,
               installation.accountType,
-              now
+              now,
             )
             .run();
         },
@@ -100,13 +113,16 @@ function makeD1GitHubService(
         const installationOpt = yield* service.getInstallation(userId);
 
         if (Option.isNone(installationOpt)) {
-          return yield* Effect.fail(new GithubError({ cause: "No GitHub installation found for user" }));
+          return yield* Effect.fail(
+            new GithubError({ cause: "No GitHub installation found for user" }),
+          );
         }
 
         const installation = installationOpt.value;
         const jwt = yield* Effect.tryPromise({
           try: () => getAppJwt(),
-          catch: (error) => new GithubError({ cause: `Failed to generate App JWT: ${error}` }),
+          catch: (error) =>
+            new GithubError({ cause: `Failed to generate App JWT: ${error}` }),
         });
 
         const res = yield* Effect.tryPromise({
@@ -120,17 +136,24 @@ function makeD1GitHubService(
                   Accept: "application/vnd.github.v3+json",
                   "User-Agent": "shipbox-api",
                 },
-              }
+              },
             ),
-          catch: (error) => new GithubError({ cause: `GitHub API request failed: ${error}` }),
+          catch: (error) =>
+            new GithubError({ cause: `GitHub API request failed: ${error}` }),
         });
 
         if (!res.ok) {
           const errorText = yield* Effect.tryPromise(() => res.text());
-          return yield* Effect.fail(new GithubError({ cause: `GitHub API returned ${res.status}: ${errorText}` }));
+          return yield* Effect.fail(
+            new GithubError({
+              cause: `GitHub API returned ${res.status}: ${errorText}`,
+            }),
+          );
         }
 
-        const data = (yield* Effect.tryPromise(() => res.json())) as { token: string };
+        const data = (yield* Effect.tryPromise(() => res.json())) as {
+          token: string;
+        };
         return data.token;
       }),
 
@@ -138,24 +161,33 @@ function makeD1GitHubService(
       Effect.gen(function* () {
         const jwt = yield* Effect.tryPromise({
           try: () => getAppJwt(),
-          catch: (error) => new GithubError({ cause: `Failed to generate App JWT: ${error}` }),
+          catch: (error) =>
+            new GithubError({ cause: `Failed to generate App JWT: ${error}` }),
         });
 
         const res = yield* Effect.tryPromise({
           try: () =>
-            fetch(`https://api.github.com/app/installations/${installationId}`, {
-              headers: {
-                Authorization: `Bearer ${jwt}`,
-                Accept: "application/vnd.github.v3+json",
-                "User-Agent": "shipbox-api",
+            fetch(
+              `https://api.github.com/app/installations/${installationId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${jwt}`,
+                  Accept: "application/vnd.github.v3+json",
+                  "User-Agent": "shipbox-api",
+                },
               },
-            }),
-          catch: (error) => new GithubError({ cause: `GitHub API request failed: ${error}` }),
+            ),
+          catch: (error) =>
+            new GithubError({ cause: `GitHub API request failed: ${error}` }),
         });
 
         if (!res.ok) {
           const errorText = yield* Effect.tryPromise(() => res.text());
-          return yield* Effect.fail(new GithubError({ cause: `GitHub API returned ${res.status}: ${errorText}` }));
+          return yield* Effect.fail(
+            new GithubError({
+              cause: `GitHub API returned ${res.status}: ${errorText}`,
+            }),
+          );
         }
 
         const data = (yield* Effect.tryPromise(() => res.json())) as any;
@@ -170,7 +202,10 @@ function makeD1GitHubService(
 export function makeGitHubServiceLayer(
   db: D1Database,
   appId: string,
-  privateKey: string
+  privateKey: string,
 ): Layer.Layer<GitHubService> {
-  return Layer.succeed(GitHubService, makeD1GitHubService(db, appId, privateKey));
+  return Layer.succeed(
+    GitHubService,
+    makeD1GitHubService(db, appId, privateKey),
+  );
 }

@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { BillingDashboard } from './BillingDashboard'
-import { api } from '../lib/api'
-import { balanceFactory } from '../test-utils'
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { BillingDashboard } from "./BillingDashboard";
+import { api } from "../lib/api";
+import { balanceFactory } from "../test-utils";
 
 const { __createMockApi } = vi.hoisted(() => ({
   __createMockApi: () => ({
@@ -22,59 +22,75 @@ const { __createMockApi } = vi.hoisted(() => ({
     createCheckoutSession: vi.fn(),
     getTransactions: vi.fn().mockResolvedValue([]),
     getConsumption: vi.fn().mockResolvedValue({ consumptionCredits: 0 }),
-  })
-}))
+  }),
+}));
 
-vi.mock('../lib/api', () => ({
+vi.mock("../lib/api", () => ({
   api: __createMockApi(),
-}))
+}));
 
-const mockedApi = vi.mocked(api)
+const mockedApi = vi.mocked(api);
 
-describe('BillingDashboard Component', () => {
+describe("BillingDashboard Component", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockedApi.getBalance.mockResolvedValue(balanceFactory({ balanceCredits: 0 }))
-    mockedApi.getTransactions.mockResolvedValue([])
-    mockedApi.getConsumption.mockResolvedValue({ consumptionCredits: 0 })
-  })
+    vi.clearAllMocks();
+    mockedApi.getBalance.mockResolvedValue(
+      balanceFactory({ balanceCredits: 0 }),
+    );
+    mockedApi.getTransactions.mockResolvedValue([]);
+    mockedApi.getConsumption.mockResolvedValue({ consumptionCredits: 0 });
+  });
 
-  it('renders loading state initially', async () => {
-    mockedApi.getBalance.mockReturnValue(new Promise(() => {}))
-    
-    render(<BillingDashboard />)
-    expect(screen.getAllByRole('status').length).toBeGreaterThan(0)
-  })
+  it("renders loading state initially", async () => {
+    mockedApi.getBalance.mockReturnValue(new Promise(() => {}));
 
-  it('renders billing data when loaded', async () => {
-    mockedApi.getBalance.mockResolvedValue(balanceFactory({ balanceCredits: 2500 }))
+    render(<BillingDashboard />);
+    expect(screen.getAllByRole("status").length).toBeGreaterThan(0);
+  });
+
+  it("renders billing data when loaded", async () => {
+    mockedApi.getBalance.mockResolvedValue(
+      balanceFactory({ balanceCredits: 2500 }),
+    );
     mockedApi.getTransactions.mockResolvedValue([
-      { id: '1', amountCredits: -500, type: 'usage', description: 'Compute usage', createdAt: Date.now() / 1000 }
-    ])
-    mockedApi.getConsumption.mockResolvedValue({ consumptionCredits: 1200 })
-    
-    render(<BillingDashboard />)
-    
-    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
-    
-    expect(screen.getByText(/£25.00/)).toBeInTheDocument() // Balance
-    expect(screen.getByText(/£12.00/)).toBeInTheDocument() // Consumption
-    expect(screen.getAllByText('Compute usage')[0]).toBeInTheDocument() // Transaction
-    expect(screen.getAllByText(/£-5.00/)[0]).toBeInTheDocument() // Transaction amount
-  })
+      {
+        id: "1",
+        amountCredits: -500,
+        type: "usage",
+        description: "Compute usage",
+        createdAt: Date.now() / 1000,
+      },
+    ]);
+    mockedApi.getConsumption.mockResolvedValue({ consumptionCredits: 1200 });
 
-  it('handles top-up button click', async () => {
-    mockedApi.createCheckoutSession.mockResolvedValue({ url: 'https://stripe.com/pay' })
-    
-    render(<BillingDashboard />)
-    
-    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
-    
-    const topUpButton = screen.getByText(/Top Up £10.00/i)
-    fireEvent.click(topUpButton)
-    
+    render(<BillingDashboard />);
+
+    await waitFor(() =>
+      expect(screen.queryByRole("status")).not.toBeInTheDocument(),
+    );
+
+    expect(screen.getByText(/£25.00/)).toBeInTheDocument(); // Balance
+    expect(screen.getByText(/£12.00/)).toBeInTheDocument(); // Consumption
+    expect(screen.getAllByText("Compute usage")[0]).toBeInTheDocument(); // Transaction
+    expect(screen.getAllByText(/£-5.00/)[0]).toBeInTheDocument(); // Transaction amount
+  });
+
+  it("handles top-up button click", async () => {
+    mockedApi.createCheckoutSession.mockResolvedValue({
+      url: "https://stripe.com/pay",
+    });
+
+    render(<BillingDashboard />);
+
+    await waitFor(() =>
+      expect(screen.queryByRole("status")).not.toBeInTheDocument(),
+    );
+
+    const topUpButton = screen.getByText(/Top Up £10.00/i);
+    fireEvent.click(topUpButton);
+
     await waitFor(() => {
-      expect(mockedApi.createCheckoutSession).toHaveBeenCalledWith(1000)
-    })
-  })
-})
+      expect(mockedApi.createCheckoutSession).toHaveBeenCalledWith(1000);
+    });
+  });
+});

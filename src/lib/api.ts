@@ -1,13 +1,14 @@
 import * as Sentry from "@sentry/react";
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://backend.shipbox.dev';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "https://backend.shipbox.dev";
 
 export interface Sandbox {
   id: string; // Used by frontend (maps to sessionId)
   sessionId: string;
   sandboxId: string;
-  status: 'creating' | 'active' | 'idle' | 'stopped' | 'error';
+  status: "creating" | "active" | "idle" | "stopped" | "error";
   createdAt: number;
   lastActivity: number;
   workspacePath: string;
@@ -31,243 +32,309 @@ export interface Sandbox {
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) return {};
   return {
-    'Authorization': `Bearer ${session.access_token}`,
-    'Content-Type': 'application/json'
+    Authorization: `Bearer ${session.access_token}`,
+    "Content-Type": "application/json",
   };
 }
 
 export const api = {
   async getAuthToken(): Promise<string | null> {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     return session?.access_token || null;
   },
 
   async getSessions(): Promise<Sandbox[]> {
-    return Sentry.startSpan({ name: 'api.getSessions', op: 'http.client' }, async () => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}/sessions`, { headers });
-      if (!res.ok) throw new Error('Failed to fetch sessions');
-      return res.json();
-    });
+    return Sentry.startSpan(
+      { name: "api.getSessions", op: "http.client" },
+      async () => {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE_URL}/sessions`, { headers });
+        if (!res.ok) throw new Error("Failed to fetch sessions");
+        return res.json();
+      },
+    );
   },
 
-  async createSession(name: string, region: string, repository?: string): Promise<Sandbox> {
-    return Sentry.startSpan({ name: 'api.createSession', op: 'http.client' }, async () => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}/sessions`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ name, region, repository })
-      });
-      if (!res.ok) throw new Error('Failed to create session');
-      return res.json();
-    });
+  async createSession(
+    name: string,
+    region: string,
+    repository?: string,
+  ): Promise<Sandbox> {
+    return Sentry.startSpan(
+      { name: "api.createSession", op: "http.client" },
+      async () => {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE_URL}/sessions`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ name, region, repository }),
+        });
+        if (!res.ok) throw new Error("Failed to create session");
+        return res.json();
+      },
+    );
   },
 
   async getSession(id: string): Promise<Sandbox> {
-    return Sentry.startSpan({ name: 'api.getSession', op: 'http.client' }, async () => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}/sessions/${id}`, { headers });
-      if (!res.ok) throw new Error('Failed to fetch session');
-      return res.json();
-    });
+    return Sentry.startSpan(
+      { name: "api.getSession", op: "http.client" },
+      async () => {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE_URL}/sessions/${id}`, { headers });
+        if (!res.ok) throw new Error("Failed to fetch session");
+        return res.json();
+      },
+    );
   },
 
   async deleteSession(id: string): Promise<void> {
-    return Sentry.startSpan({ name: 'api.deleteSession', op: 'http.client' }, async () => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}/sessions/${id}`, {
-        method: 'DELETE',
-        headers
-      });
-      if (!res.ok) throw new Error('Failed to delete session');
-    });
+    return Sentry.startSpan(
+      { name: "api.deleteSession", op: "http.client" },
+      async () => {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE_URL}/sessions/${id}`, {
+          method: "DELETE",
+          headers,
+        });
+        if (!res.ok) throw new Error("Failed to delete session");
+      },
+    );
   },
 
-  async startSession(id: string): Promise<{ success: boolean; status: string }> {
-    return Sentry.startSpan({ name: 'api.startSession', op: 'http.client' }, async () => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}/sessions/${id}/start`, {
-        method: 'POST',
-        headers
-      });
-      if (!res.ok) throw new Error('Failed to start session');
-      return res.json();
-    });
+  async startSession(
+    id: string,
+  ): Promise<{ success: boolean; status: string }> {
+    return Sentry.startSpan(
+      { name: "api.startSession", op: "http.client" },
+      async () => {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE_URL}/sessions/${id}/start`, {
+          method: "POST",
+          headers,
+        });
+        if (!res.ok) throw new Error("Failed to start session");
+        return res.json();
+      },
+    );
   },
 
-  async getBalance(): Promise<{ userId: string; balanceCredits: number; updatedAt: number }> {
+  async getBalance(): Promise<{
+    userId: string;
+    balanceCredits: number;
+    updatedAt: number;
+  }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/billing/balance`, { headers });
-    if (!res.ok) throw new Error('Failed to fetch balance');
+    if (!res.ok) throw new Error("Failed to fetch balance");
     return res.json();
   },
 
   async createCheckoutSession(amountCredits: number): Promise<{ url: string }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/billing/checkout`, {
-      method: 'POST',
+      method: "POST",
       headers,
-      body: JSON.stringify({ amountCredits })
+      body: JSON.stringify({ amountCredits }),
     });
-    if (!res.ok) throw new Error('Failed to create checkout session');
+    if (!res.ok) throw new Error("Failed to create checkout session");
     return res.json();
   },
 
   async createPortalSession(): Promise<{ url: string }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/billing/portal`, {
-      method: 'POST',
-      headers
+      method: "POST",
+      headers,
     });
     if (!res.ok) {
       const data = await res.json();
-      throw new Error(data.error || 'Failed to create portal session');
+      throw new Error(data.error || "Failed to create portal session");
     }
     return res.json();
   },
 
-  async getTransactions(limit?: number): Promise<{ id: string; amountCredits: number; type: string; createdAt: number; description: string }[]> {
+  async getTransactions(limit?: number): Promise<
+    {
+      id: string;
+      amountCredits: number;
+      type: string;
+      createdAt: number;
+      description: string;
+    }[]
+  > {
     const headers = await getAuthHeaders();
     const url = new URL(`${API_BASE_URL}/billing/transactions`);
-    if (limit) url.searchParams.set('limit', limit.toString());
+    if (limit) url.searchParams.set("limit", limit.toString());
     const res = await fetch(url.toString(), { headers });
-    if (!res.ok) throw new Error('Failed to fetch transactions');
+    if (!res.ok) throw new Error("Failed to fetch transactions");
     return res.json();
   },
 
   async getConsumption(): Promise<{ consumptionCredits: number }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/billing/consumption`, { headers });
-    if (!res.ok) throw new Error('Failed to fetch consumption');
+    if (!res.ok) throw new Error("Failed to fetch consumption");
     return res.json();
   },
 
   // GitHub integration
-  async getGitHubStatus(): Promise<{ installationId: number; accountLogin: string; accountType: string } | null> {
+  async getGitHubStatus(): Promise<{
+    installationId: number;
+    accountLogin: string;
+    accountType: string;
+  } | null> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/github/status`, { headers });
-    if (!res.ok) throw new Error('Failed to fetch GitHub status');
+    if (!res.ok) throw new Error("Failed to fetch GitHub status");
     return res.json();
   },
 
   async getGitHubInstallUrl(): Promise<{ url: string }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/github/install`, { headers });
-    if (!res.ok) throw new Error('Failed to fetch GitHub installation URL');
+    if (!res.ok) throw new Error("Failed to fetch GitHub installation URL");
     return res.json();
   },
 
   async linkGitHub(installationId: string): Promise<void> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/github/link`, {
-      method: 'POST',
+      method: "POST",
       headers,
-      body: JSON.stringify({ installationId })
+      body: JSON.stringify({ installationId }),
     });
-    if (!res.ok) throw new Error('Failed to link GitHub');
+    if (!res.ok) throw new Error("Failed to link GitHub");
   },
 
-  async getGitHubRepos(): Promise<{ id: number; name: string; full_name: string; html_url: string }[]> {
+  async getGitHubRepos(): Promise<
+    { id: number; name: string; full_name: string; html_url: string }[]
+  > {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/github/repos`, { headers });
-    if (!res.ok) throw new Error('Failed to fetch repositories');
+    if (!res.ok) throw new Error("Failed to fetch repositories");
     return res.json();
   },
 
   async disconnectGitHub(): Promise<void> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/github/installation`, {
-      method: 'DELETE',
-      headers
+      method: "DELETE",
+      headers,
     });
-    if (!res.ok) throw new Error('Failed to disconnect GitHub');
+    if (!res.ok) throw new Error("Failed to disconnect GitHub");
   },
 
   // Settings & API Keys
   async getSettings(): Promise<{ anthropicHint: string | null }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/settings/api-keys`, { headers });
-    if (!res.ok) throw new Error('Failed to fetch settings');
+    if (!res.ok) throw new Error("Failed to fetch settings");
     return res.json();
   },
 
   async setAnthropicKey(apiKey: string): Promise<void> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/settings/api-keys/anthropic`, {
-      method: 'POST',
+      method: "POST",
       headers,
-      body: JSON.stringify({ apiKey })
+      body: JSON.stringify({ apiKey }),
     });
-    if (!res.ok) throw new Error('Failed to store API key');
+    if (!res.ok) throw new Error("Failed to store API key");
   },
 
   async deleteAnthropicKey(): Promise<void> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/settings/api-keys/anthropic`, {
-      method: 'DELETE',
-      headers
+      method: "DELETE",
+      headers,
     });
-    if (!res.ok) throw new Error('Failed to delete API key');
+    if (!res.ok) throw new Error("Failed to delete API key");
   },
 
   // Box Secrets
-  async getBoxSecrets(): Promise<{ id: string; name: string; hint: string; createdAt: number; lastUsed?: number }[]> {
+  async getBoxSecrets(): Promise<
+    {
+      id: string;
+      name: string;
+      hint: string;
+      createdAt: number;
+      lastUsed?: number;
+    }[]
+  > {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/box-secrets`, { headers });
-    if (!res.ok) throw new Error('Failed to fetch box secrets');
+    if (!res.ok) throw new Error("Failed to fetch box secrets");
     return res.json();
   },
 
-  async createBoxSecret(name: string, value: string): Promise<{ id: string; name: string; hint: string; createdAt: number }> {
+  async createBoxSecret(
+    name: string,
+    value: string,
+  ): Promise<{ id: string; name: string; hint: string; createdAt: number }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/box-secrets`, {
-      method: 'POST',
+      method: "POST",
       headers,
-      body: JSON.stringify({ name, value })
+      body: JSON.stringify({ name, value }),
     });
-    if (!res.ok) throw new Error('Failed to create box secret');
+    if (!res.ok) throw new Error("Failed to create box secret");
     return res.json();
   },
 
   async deleteBoxSecret(id: string): Promise<void> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/box-secrets/${id}`, {
-      method: 'DELETE',
-      headers
+      method: "DELETE",
+      headers,
     });
-    if (!res.ok) throw new Error('Failed to delete box secret');
+    if (!res.ok) throw new Error("Failed to delete box secret");
   },
 
   // Agent Chat & Planning
   async getPlan(sessionId: string): Promise<{ content: string }> {
     const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/plan`, { headers });
-    if (!res.ok) throw new Error('Failed to fetch plan');
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/plan`, {
+      headers,
+    });
+    if (!res.ok) throw new Error("Failed to fetch plan");
     return res.json();
   },
 
-  async sendTask(sessionId: string, task: string, title?: string): Promise<{ runId: string; status: string }> {
+  async sendTask(
+    sessionId: string,
+    task: string,
+    title?: string,
+  ): Promise<{ runId: string; status: string }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/task`, {
-      method: 'POST',
+      method: "POST",
       headers,
-      body: JSON.stringify({ task, title })
+      body: JSON.stringify({ task, title }),
     });
     if (!res.ok) {
-      const errorData = await res.json() as any;
-      throw new Error(errorData.error || 'Failed to start task');
+      const errorData = (await res.json()) as any;
+      throw new Error(errorData.error || "Failed to start task");
     }
     return res.json();
   },
 
-  async getRunStatus(sessionId: string, runId: string): Promise<{ status: string; summary?: string; error?: string }> {
+  async getRunStatus(
+    sessionId: string,
+    runId: string,
+  ): Promise<{ status: string; summary?: string; error?: string }> {
     const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/runs/${runId}`, { headers });
-    if (!res.ok) throw new Error('Failed to fetch run status');
+    const res = await fetch(
+      `${API_BASE_URL}/sessions/${sessionId}/runs/${runId}`,
+      { headers },
+    );
+    if (!res.ok) throw new Error("Failed to fetch run status");
     return res.json();
-  }
+  },
 };

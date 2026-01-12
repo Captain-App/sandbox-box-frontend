@@ -3,12 +3,8 @@ import type { Connection, ConnectionContext } from "agents";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Effect, pipe } from "effect";
 import * as Sentry from "@sentry/cloudflare";
-import { 
-  withRequestContext, 
-  withSentry, 
-  LoggerLayer 
-} from "@shipbox/shared";
-import { 
+import { withRequestContext, withSentry, LoggerLayer } from "@shipbox/shared";
+import {
   adminGetStatsSchema,
   adminListUsersSchema,
   adminListSessionsSchema,
@@ -40,7 +36,7 @@ import {
   type AdminGetSessionTracesInput,
   type AdminGetAuthTokenInput,
   type AdminCreateSessionInput,
-  type AdminCallEngineMcpInput
+  type AdminCallEngineMcpInput,
 } from "./tools";
 import { SentryService, makeSentryServiceLayer } from "../services/sentry";
 import { Env } from "../types";
@@ -79,15 +75,23 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
     this.setState({ initialized: true });
   }
 
-  override async onConnect(connection: Connection, ctx: ConnectionContext): Promise<void> {
+  override async onConnect(
+    connection: Connection,
+    ctx: ConnectionContext,
+  ): Promise<void> {
     console.log(`[AdminMCP] onConnect: ${ctx.request.url}`);
     return super.onConnect(connection, ctx);
   }
 
-  private async fetchAdmin(path: string, searchParams?: Record<string, string>): Promise<any> {
+  private async fetchAdmin(
+    path: string,
+    searchParams?: Record<string, string>,
+  ): Promise<any> {
     const url = new URL(`http://api/admin${path}`);
     if (searchParams) {
-      Object.entries(searchParams).forEach(([k, v]) => url.searchParams.set(k, v));
+      Object.entries(searchParams).forEach(([k, v]) =>
+        url.searchParams.set(k, v),
+      );
     }
 
     const response = await this.env.SHIPBOX_API.fetch(url.toString(), {
@@ -98,7 +102,9 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
     });
 
     if (!response.ok) {
-      throw new Error(`Admin API error: ${response.status} ${await response.text()}`);
+      throw new Error(
+        `Admin API error: ${response.status} ${await response.text()}`,
+      );
     }
 
     return response.json();
@@ -121,7 +127,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -145,7 +151,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -170,7 +176,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -195,7 +201,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -214,8 +220,14 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
           });
         }
 
-        const project = params.project === "api" ? this.env.SENTRY_PROJECT_API : this.env.SENTRY_PROJECT_ENGINE;
-        const sentryLayer = makeSentryServiceLayer(this.env.SENTRY_AUTH_TOKEN, this.env.SENTRY_ORG);
+        const project =
+          params.project === "api"
+            ? this.env.SENTRY_PROJECT_API
+            : this.env.SENTRY_PROJECT_ENGINE;
+        const sentryLayer = makeSentryServiceLayer(
+          this.env.SENTRY_AUTH_TOKEN,
+          this.env.SENTRY_ORG,
+        );
 
         try {
           const result = await Effect.runPromise(
@@ -224,8 +236,8 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
                 const sentry = yield* SentryService;
                 return yield* sentry.getRecentIssues(project);
               }),
-              Effect.provide(sentryLayer)
-            )
+              Effect.provide(sentryLayer),
+            ),
           );
           return formatToolResponse(result);
         } catch (error) {
@@ -234,7 +246,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -263,7 +275,9 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
         // 2. Check Engine via API proxy
         try {
           const start = Date.now();
-          const res = await this.env.SHIPBOX_API.fetch("http://api/internal/engine-health");
+          const res = await this.env.SHIPBOX_API.fetch(
+            "http://api/internal/engine-health",
+          );
           results.engine = {
             status: res.status === 200 ? "healthy" : "unhealthy",
             latency: Date.now() - start,
@@ -273,7 +287,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
         }
 
         return formatToolResponse(results);
-      }
+      },
     );
   }
 
@@ -281,15 +295,22 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
     this.server.registerTool(
       "admin_list_r2_sessions",
       {
-        description: "List all sessions from R2 storage index (most accurate for MCP-only sessions).",
+        description:
+          "List all sessions from R2 storage index (most accurate for MCP-only sessions).",
         inputSchema: adminListR2SessionsSchema,
       },
       async (params: AdminListR2SessionsInput) => {
         try {
-          const res = await this.env.SANDBOX_MCP.fetch("http://sandbox/internal/sessions", {
-            headers: { "X-Request-Id": crypto.randomUUID() }
-          });
-          if (!res.ok) throw new Error(`Engine API error: ${res.status} ${await res.text()}`);
+          const res = await this.env.SANDBOX_MCP.fetch(
+            "http://sandbox/internal/sessions",
+            {
+              headers: { "X-Request-Id": crypto.randomUUID() },
+            },
+          );
+          if (!res.ok)
+            throw new Error(
+              `Engine API error: ${res.status} ${await res.text()}`,
+            );
           const data = await res.json();
           return formatToolResponse(data);
         } catch (error) {
@@ -298,7 +319,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -311,10 +332,16 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
       },
       async (params: AdminGetSessionLogsInput) => {
         try {
-          const res = await this.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${params.sessionId}/logs`, {
-            headers: { "X-Request-Id": crypto.randomUUID() }
-          });
-          if (!res.ok) throw new Error(`Engine API error: ${res.status} ${await res.text()}`);
+          const res = await this.env.SANDBOX_MCP.fetch(
+            `http://sandbox/internal/sessions/${params.sessionId}/logs`,
+            {
+              headers: { "X-Request-Id": crypto.randomUUID() },
+            },
+          );
+          if (!res.ok)
+            throw new Error(
+              `Engine API error: ${res.status} ${await res.text()}`,
+            );
           const data = await res.json();
           return formatToolResponse(data);
         } catch (error) {
@@ -323,7 +350,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -336,10 +363,16 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
       },
       async (params: AdminGetSessionMetadataInput) => {
         try {
-          const res = await this.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${params.sessionId}`, {
-            headers: { "X-Request-Id": crypto.randomUUID() }
-          });
-          if (!res.ok) throw new Error(`Engine API error: ${res.status} ${await res.text()}`);
+          const res = await this.env.SANDBOX_MCP.fetch(
+            `http://sandbox/internal/sessions/${params.sessionId}`,
+            {
+              headers: { "X-Request-Id": crypto.randomUUID() },
+            },
+          );
+          if (!res.ok)
+            throw new Error(
+              `Engine API error: ${res.status} ${await res.text()}`,
+            );
           const data = await res.json();
           return formatToolResponse(data);
         } catch (error) {
@@ -348,7 +381,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -371,7 +404,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -392,7 +425,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -405,7 +438,9 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
       },
       async (params: AdminGetSessionTracesInput) => {
         try {
-          const traces = await this.fetchAdmin(`/traces/session/${params.sessionId}`);
+          const traces = await this.fetchAdmin(
+            `/traces/session/${params.sessionId}`,
+          );
           return formatToolResponse(traces);
         } catch (error) {
           return formatErrorResponse({
@@ -413,7 +448,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -421,7 +456,8 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
     this.server.registerTool(
       "admin_get_auth_token",
       {
-        description: "Get a valid Supabase JWT for the admin user (admin@captainapp.co.uk) to interact with the service as a user.",
+        description:
+          "Get a valid Supabase JWT for the admin user (admin@captainapp.co.uk) to interact with the service as a user.",
         inputSchema: adminGetAuthTokenSchema,
       },
       async (params: AdminGetAuthTokenInput) => {
@@ -434,7 +470,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -450,15 +486,21 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
       },
       async (params: AdminCreateSessionInput) => {
         try {
-          const res = await this.env.SANDBOX_MCP.fetch("http://sandbox/internal/sessions", {
-            method: "POST",
-            body: JSON.stringify({ userId: params.userId || ADMIN_USER_ID }),
-            headers: {
-              "Content-Type": "application/json",
-              "X-Request-Id": crypto.randomUUID(),
-            }
-          });
-          if (!res.ok) throw new Error(`Engine API error: ${res.status} ${await res.text()}`);
+          const res = await this.env.SANDBOX_MCP.fetch(
+            "http://sandbox/internal/sessions",
+            {
+              method: "POST",
+              body: JSON.stringify({ userId: params.userId || ADMIN_USER_ID }),
+              headers: {
+                "Content-Type": "application/json",
+                "X-Request-Id": crypto.randomUUID(),
+              },
+            },
+          );
+          if (!res.ok)
+            throw new Error(
+              `Engine API error: ${res.status} ${await res.text()}`,
+            );
           const data = await res.json();
           return formatToolResponse(data);
         } catch (error) {
@@ -467,7 +509,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 
@@ -500,15 +542,15 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
               params: {
                 protocolVersion: "2024-11-05",
                 capabilities: {},
-                clientInfo: { name: "admin-mcp", version: "1.0.0" }
+                clientInfo: { name: "admin-mcp", version: "1.0.0" },
               },
             }),
             headers: {
               "Content-Type": "application/json",
-              "Accept": "application/json, text/event-stream",
-              "Authorization": `Bearer ${accessToken}`,
+              Accept: "application/json, text/event-stream",
+              Authorization: `Bearer ${accessToken}`,
               "X-Request-Id": crypto.randomUUID(),
-            }
+            },
           });
 
           if (!initRes.ok) {
@@ -555,20 +597,21 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             body: bodyStr,
             headers: {
               "Content-Type": "application/json",
-              "Accept": "application/json, text/event-stream",
-              "Authorization": `Bearer ${accessToken}`,
+              Accept: "application/json, text/event-stream",
+              Authorization: `Bearer ${accessToken}`,
               "Mcp-Session-Id": mcpSessionId,
               "X-Request-Id": crypto.randomUUID(),
-            }
+            },
           });
 
           const resText = await res.text();
 
-          if (!res.ok) throw new Error(`Engine MCP error: ${res.status} ${resText}`);
-          
+          if (!res.ok)
+            throw new Error(`Engine MCP error: ${res.status} ${resText}`);
+
           // Parse SSE response (already read above)
           const text = resText;
-          const dataLine = text.split('\n').find(l => l.startsWith('data: '));
+          const dataLine = text.split("\n").find((l) => l.startsWith("data: "));
           if (dataLine) {
             const data = JSON.parse(dataLine.slice(6));
             return formatToolResponse(data);
@@ -580,7 +623,7 @@ export class AdminMcpAgent extends McpAgent<Env, AdminState> {
             message: error instanceof Error ? error.message : String(error),
           });
         }
-      }
+      },
     );
   }
 }

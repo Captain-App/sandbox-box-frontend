@@ -1,80 +1,100 @@
-import { useState, useEffect, useRef } from "react"
-import { Box, X, Github, Zap, Loader2, Search, Check } from "lucide-react"
-import { Button } from "./ui/Button"
-import { cn } from "../lib/utils"
-import { api } from "../lib/api"
+import { useState, useEffect, useRef } from "react";
+import { Box, X, Github, Zap, Loader2, Search, Check } from "lucide-react";
+import { Button } from "./ui/Button";
+import { cn } from "../lib/utils";
+import { api } from "../lib/api";
 
 interface CreateSandboxModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onCreate: (name: string, region: string, repository?: string) => Promise<{ id: string }>
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (
+    name: string,
+    region: string,
+    repository?: string,
+  ) => Promise<{ id: string }>;
 }
 
 const regions = [
-  { id: 'lhr', name: 'London (LHR)', icon: '🇬🇧' },
-  { id: 'jfk', name: 'New York (JFK)', icon: '🇺🇸' },
-  { id: 'nrt', name: 'Tokyo (NRT)', icon: '🇯🇵' },
-  { id: 'fra', name: 'Frankfurt (FRA)', icon: '🇩🇪' },
-]
+  { id: "lhr", name: "London (LHR)", icon: "🇬🇧" },
+  { id: "jfk", name: "New York (JFK)", icon: "🇺🇸" },
+  { id: "nrt", name: "Tokyo (NRT)", icon: "🇯🇵" },
+  { id: "fra", name: "Frankfurt (FRA)", icon: "🇩🇪" },
+];
 
-export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxModalProps) {
+export function CreateSandboxModal({
+  isOpen,
+  onClose,
+  onCreate,
+}: CreateSandboxModalProps) {
   // Use refs for uncontrolled inputs - more AI/automation friendly
-  const nameRef = useRef<HTMLInputElement>(null)
-  const repoRef = useRef<HTMLInputElement>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
-  const logEndRef = useRef<HTMLDivElement>(null)
-  
-  const [name, setName] = useState("") // Keep name state for UI feedback (disabling button)
-  const [selectedRegion, setSelectedRegion] = useState("lhr")
-  const [selectedRepo, setSelectedRepo] = useState("")
-  const [githubRepos, setGithubRepos] = useState<{ id: number; name: string; full_name: string; html_url: string }[]>([])
-  const [loadingRepos, setLoadingRepos] = useState(false)
-  const [showRepoPicker, setShowRepoPicker] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [logs, setLogs] = useState<any[]>([])
-  const [createdId, setCreatedId] = useState<string | null>(null)
+  const nameRef = useRef<HTMLInputElement>(null);
+  const repoRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  const [name, setName] = useState(""); // Keep name state for UI feedback (disabling button)
+  const [selectedRegion, setSelectedRegion] = useState("lhr");
+  const [selectedRepo, setSelectedRepo] = useState("");
+  const [githubRepos, setGithubRepos] = useState<
+    { id: number; name: string; full_name: string; html_url: string }[]
+  >([]);
+  const [loadingRepos, setLoadingRepos] = useState(false);
+  const [showRepoPicker, setShowRepoPicker] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       // Use Promise.resolve() to avoid synchronous setState in effect
       Promise.resolve().then(() => {
-        setError(null)
-        setLoadingRepos(true)
-        setLogs([])
-        setCreatedId(null)
-      })
-      
-      api.getGitHubRepos()
-        .then(repos => setGithubRepos(repos))
+        setError(null);
+        setLoadingRepos(true);
+        setLogs([]);
+        setCreatedId(null);
+      });
+
+      api
+        .getGitHubRepos()
+        .then((repos) => setGithubRepos(repos))
         .catch(() => setGithubRepos([]))
-        .finally(() => setLoadingRepos(false))
+        .finally(() => setLoadingRepos(false));
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // Scroll to bottom of logs
   useEffect(() => {
     if (logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: "smooth" })
+      logEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [logs])
+  }, [logs]);
 
   // Poll for logs when initialization is in progress
   useEffect(() => {
-    if (!isLoading || !createdId) return
+    if (!isLoading || !createdId) return;
 
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://backend.shipbox.dev'}/internal/sessions/${createdId}/logs`, {
-          headers: {
-            'Authorization': `Bearer ${(await api.getAuthToken())}`
-          }
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || "https://backend.shipbox.dev"}/internal/sessions/${createdId}/logs`,
+          {
+            headers: {
+              Authorization: `Bearer ${await api.getAuthToken()}`,
+            },
+          },
+        );
         if (response.ok) {
           const data = await response.json();
           // Sort by timestamp ascending
-          setLogs(data.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+          setLogs(
+            data.sort(
+              (a: any, b: any) =>
+                new Date(a.timestamp).getTime() -
+                new Date(b.timestamp).getTime(),
+            ),
+          );
         }
       } catch (err) {
         console.error("Failed to poll logs:", err);
@@ -84,31 +104,35 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
     return () => clearInterval(pollInterval);
   }, [isLoading, createdId]);
 
-  const filteredRepos = githubRepos.filter(r => 
-    r.full_name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredRepos = githubRepos.filter((r) =>
+    r.full_name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   const handleInitialise = async () => {
-    const finalName = name || nameRef.current?.value || '';
-    const finalRepo = selectedRepo || repoRef.current?.value || '';
-    
+    const finalName = name || nameRef.current?.value || "";
+    const finalRepo = selectedRepo || repoRef.current?.value || "";
+
     if (!finalName) return;
-    
+
     setIsLoading(true);
     setError(null);
     try {
-      const sandbox = await onCreate(finalName, selectedRegion, finalRepo || undefined);
+      const sandbox = await onCreate(
+        finalName,
+        selectedRegion,
+        finalRepo || undefined,
+      );
       setCreatedId(sandbox.id);
-      
+
       // Wait for initialization to complete by polling status
       const checkStatus = setInterval(async () => {
         try {
           const sb = await api.getSession(sandbox.id);
-          if (sb.status === 'active') {
+          if (sb.status === "active") {
             clearInterval(checkStatus);
             setIsLoading(false);
             onClose();
-          } else if (sb.status === 'error') {
+          } else if (sb.status === "error") {
             clearInterval(checkStatus);
             setError("Initialization failed. Check logs for details.");
             setIsLoading(false);
@@ -117,22 +141,29 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
           // Ignore transient errors
         }
       }, 3000);
-      
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to initialise sandbox';
+      const message =
+        err instanceof Error ? err.message : "Failed to initialise sandbox";
       setError(message);
       setIsLoading(false);
     }
   };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
-      
+      <div
+        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
       <div className="relative w-full max-w-xl p-6 md:p-8 rounded-[2.5rem] border border-white/10 bg-slate-950 shadow-2xl overflow-y-auto max-h-[90vh]">
-        <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-muted-foreground transition-colors" disabled={isLoading}>
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-muted-foreground transition-colors"
+          disabled={isLoading}
+        >
           <X className="w-5 h-5" />
         </button>
 
@@ -142,8 +173,12 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
               <Box className="w-5 h-5 md:w-6 md:h-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter text-white">New Sandbox Box</h2>
-              <p className="text-muted-foreground text-xs md:text-sm">Spin up a fresh persistent agent environment.</p>
+              <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter text-white">
+                New Sandbox Box
+              </h2>
+              <p className="text-muted-foreground text-xs md:text-sm">
+                Spin up a fresh persistent agent environment.
+              </p>
             </div>
           </div>
 
@@ -155,7 +190,12 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
             )}
 
             <div className="space-y-2">
-              <label htmlFor="sandbox-name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Box Name</label>
+              <label
+                htmlFor="sandbox-name"
+                className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+              >
+                Box Name
+              </label>
               <input
                 ref={nameRef}
                 id="sandbox-name"
@@ -172,7 +212,9 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Deploy Region</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                Deploy Region
+              </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {regions.map((region) => (
                   <button
@@ -181,9 +223,9 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
                     disabled={isLoading}
                     className={cn(
                       "flex items-center gap-3 p-3 rounded-xl border transition-all text-left disabled:opacity-50",
-                      selectedRegion === region.id 
-                        ? "bg-primary/10 border-primary text-primary" 
-                        : "bg-white/5 border-white/5 hover:border-white/10 text-muted-foreground"
+                      selectedRegion === region.id
+                        ? "bg-primary/10 border-primary text-primary"
+                        : "bg-white/5 border-white/5 hover:border-white/10 text-muted-foreground",
                     )}
                   >
                     <span className="text-lg">{region.icon}</span>
@@ -194,8 +236,10 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Initial Repository (Optional)</label>
-              
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                Initial Repository (Optional)
+              </label>
+
               {githubRepos.length > 0 ? (
                 <div className="relative">
                   <button
@@ -205,13 +249,23 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
                       <Github className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <span className="truncate">{selectedRepo || "Select from GitHub..."}</span>
+                      <span className="truncate">
+                        {selectedRepo || "Select from GitHub..."}
+                      </span>
                     </div>
-                    {loadingRepos ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Search className="w-4 h-4 shrink-0" />}
+                    {loadingRepos ? (
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    ) : (
+                      <Search className="w-4 h-4 shrink-0" />
+                    )}
                   </button>
 
                   {showRepoPicker && !isLoading && (
-                    <div className="absolute z-10 left-0 right-0 mt-2 p-2 rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-h-64 overflow-y-auto" role="listbox" aria-label="Repository list">
+                    <div
+                      className="absolute z-10 left-0 right-0 mt-2 p-2 rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-h-64 overflow-y-auto"
+                      role="listbox"
+                      aria-label="Repository list"
+                    >
                       <input
                         ref={searchRef}
                         id="repo-search"
@@ -238,14 +292,22 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
                             className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5 text-left text-xs transition-all"
                           >
                             <div className="flex flex-col overflow-hidden">
-                              <span className="font-bold text-white truncate">{r.name}</span>
-                              <span className="text-[10px] text-muted-foreground truncate">{r.full_name}</span>
+                              <span className="font-bold text-white truncate">
+                                {r.name}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground truncate">
+                                {r.full_name}
+                              </span>
                             </div>
-                            {selectedRepo === r.html_url && <Check className="w-3 h-3 text-primary shrink-0" />}
+                            {selectedRepo === r.html_url && (
+                              <Check className="w-3 h-3 text-primary shrink-0" />
+                            )}
                           </button>
                         ))}
                         {filteredRepos.length === 0 && (
-                          <div className="py-4 text-center text-[10px] text-muted-foreground">No repositories found</div>
+                          <div className="py-4 text-center text-[10px] text-muted-foreground">
+                            No repositories found
+                          </div>
                         )}
                       </div>
                     </div>
@@ -253,7 +315,10 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
                 </div>
               ) : (
                 <div className="relative">
-                  <Github className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                  <Github
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
                   <input
                     ref={repoRef}
                     id="repo-url"
@@ -270,40 +335,67 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
           </div>
 
           <div className="pt-4">
-            <Button 
+            <Button
               className="w-full py-6 text-lg uppercase tracking-widest gap-3"
               disabled={!name || isLoading}
               onClick={handleInitialise}
               aria-label="Create new sandbox"
             >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Zap className="w-5 h-5" />
+              )}
               {isLoading ? "Initialising..." : "Initialise Sandbox"}
             </Button>
 
             {isLoading && (
               <div className="mt-6 space-y-2">
                 <div className="flex items-center justify-between px-1">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">Initialisation Logs</span>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase">{logs.length} operations logged</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">
+                    Initialisation Logs
+                  </span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                    {logs.length} operations logged
+                  </span>
                 </div>
                 <div className="bg-black/50 border border-white/10 rounded-xl p-4 h-48 overflow-y-auto font-mono text-[10px] space-y-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                   {logs.length === 0 ? (
-                    <div className="text-muted-foreground animate-pulse">Waiting for sandbox engine...</div>
+                    <div className="text-muted-foreground animate-pulse">
+                      Waiting for sandbox engine...
+                    </div>
                   ) : (
                     logs.map((log, i) => (
-                      <div key={i} className="space-y-1 border-b border-white/5 pb-2 last:border-0">
+                      <div
+                        key={i}
+                        className="space-y-1 border-b border-white/5 pb-2 last:border-0"
+                      >
                         <div className="flex items-center gap-2">
-                          <span className="text-primary/50">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
-                          <span className={cn(
-                            "font-bold uppercase",
-                            log.exitCode === 0 ? "text-green-500" : "text-red-500"
-                          )}>
+                          <span className="text-primary/50">
+                            [{new Date(log.timestamp).toLocaleTimeString()}]
+                          </span>
+                          <span
+                            className={cn(
+                              "font-bold uppercase",
+                              log.exitCode === 0
+                                ? "text-green-500"
+                                : "text-red-500",
+                            )}
+                          >
                             {log.context}
                           </span>
-                          <span className="text-muted-foreground">({log.durationMs}ms)</span>
+                          <span className="text-muted-foreground">
+                            ({log.durationMs}ms)
+                          </span>
                         </div>
-                        <div className="text-white/80 break-all">{log.command}</div>
-                        {log.stderr && <div className="text-red-400/80 italic">{log.stderr}</div>}
+                        <div className="text-white/80 break-all">
+                          {log.command}
+                        </div>
+                        {log.stderr && (
+                          <div className="text-red-400/80 italic">
+                            {log.stderr}
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
@@ -319,5 +411,5 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -10,10 +10,18 @@ export interface ShipboxApiKey {
 }
 
 export interface ShipboxApiKeyServiceInterface {
-  readonly createKey: (userId: string, name: string) => Effect.Effect<{ key: string; name: string; hint: string }, Error>;
+  readonly createKey: (
+    userId: string,
+    name: string,
+  ) => Effect.Effect<{ key: string; name: string; hint: string }, Error>;
   readonly validateKey: (key: string) => Effect.Effect<string, Error>; // returns userId
-  readonly listKeys: (userId: string) => Effect.Effect<Omit<ShipboxApiKey, 'key_hash'>[], Error>;
-  readonly deleteKey: (userId: string, hint: string) => Effect.Effect<void, Error>;
+  readonly listKeys: (
+    userId: string,
+  ) => Effect.Effect<Omit<ShipboxApiKey, "key_hash">[], Error>;
+  readonly deleteKey: (
+    userId: string,
+    hint: string,
+  ) => Effect.Effect<void, Error>;
 }
 
 export class ShipboxApiKeyService extends Context.Tag("ShipboxApiKeyService")<
@@ -21,7 +29,9 @@ export class ShipboxApiKeyService extends Context.Tag("ShipboxApiKeyService")<
   ShipboxApiKeyServiceInterface
 >() {}
 
-function makeShipboxApiKeyService(db: D1Database): ShipboxApiKeyServiceInterface {
+function makeShipboxApiKeyService(
+  db: D1Database,
+): ShipboxApiKeyServiceInterface {
   const hashKey = async (key: string) => {
     const encoder = new TextEncoder();
     const data = encoder.encode(key);
@@ -33,7 +43,13 @@ function makeShipboxApiKeyService(db: D1Database): ShipboxApiKeyServiceInterface
 
   const generateKey = () => {
     const bytes = crypto.getRandomValues(new Uint8Array(24));
-    return "sb_" + btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return (
+      "sb_" +
+      btoa(String.fromCharCode(...bytes))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "")
+    );
   };
 
   return {
@@ -48,7 +64,7 @@ function makeShipboxApiKeyService(db: D1Database): ShipboxApiKeyServiceInterface
           await db
             .prepare(
               `INSERT INTO user_shipbox_api_keys (key_hash, user_id, name, key_hint, created_at)
-               VALUES (?, ?, ?, ?, ?)`
+               VALUES (?, ?, ?, ?, ?)`,
             )
             .bind(hash, userId, name, hint, now)
             .run();
@@ -63,7 +79,9 @@ function makeShipboxApiKeyService(db: D1Database): ShipboxApiKeyServiceInterface
         try: async () => {
           const hash = await hashKey(key);
           const result = await db
-            .prepare("SELECT user_id FROM user_shipbox_api_keys WHERE key_hash = ?")
+            .prepare(
+              "SELECT user_id FROM user_shipbox_api_keys WHERE key_hash = ?",
+            )
             .bind(hash)
             .first();
 
@@ -72,20 +90,27 @@ function makeShipboxApiKeyService(db: D1Database): ShipboxApiKeyServiceInterface
           // Update last used
           const now = Math.floor(Date.now() / 1000);
           await db
-            .prepare("UPDATE user_shipbox_api_keys SET last_used = ? WHERE key_hash = ?")
+            .prepare(
+              "UPDATE user_shipbox_api_keys SET last_used = ? WHERE key_hash = ?",
+            )
             .bind(now, hash)
             .run();
 
           return result.user_id as string;
         },
-        catch: (error) => new Error(`Validation failed: ${error instanceof Error ? error.message : error}`),
+        catch: (error) =>
+          new Error(
+            `Validation failed: ${error instanceof Error ? error.message : error}`,
+          ),
       }),
 
     listKeys: (userId) =>
       Effect.tryPromise({
         try: async () => {
           const { results } = await db
-            .prepare("SELECT user_id, name, key_hint, created_at, last_used FROM user_shipbox_api_keys WHERE user_id = ?")
+            .prepare(
+              "SELECT user_id, name, key_hint, created_at, last_used FROM user_shipbox_api_keys WHERE user_id = ?",
+            )
             .bind(userId)
             .all();
 
@@ -98,7 +123,9 @@ function makeShipboxApiKeyService(db: D1Database): ShipboxApiKeyServiceInterface
       Effect.tryPromise({
         try: async () => {
           await db
-            .prepare("DELETE FROM user_shipbox_api_keys WHERE user_id = ? AND key_hint = ?")
+            .prepare(
+              "DELETE FROM user_shipbox_api_keys WHERE user_id = ? AND key_hint = ?",
+            )
             .bind(userId, hint)
             .run();
         },
@@ -107,6 +134,8 @@ function makeShipboxApiKeyService(db: D1Database): ShipboxApiKeyServiceInterface
   };
 }
 
-export function makeShipboxApiKeyServiceLayer(db: D1Database): Layer.Layer<ShipboxApiKeyService> {
+export function makeShipboxApiKeyServiceLayer(
+  db: D1Database,
+): Layer.Layer<ShipboxApiKeyService> {
   return Layer.succeed(ShipboxApiKeyService, makeShipboxApiKeyService(db));
 }

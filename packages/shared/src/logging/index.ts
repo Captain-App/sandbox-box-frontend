@@ -1,4 +1,12 @@
-import { Context, Effect, Layer, Logger, FiberRef, FiberRefs, Cause } from "effect";
+import {
+  Context,
+  Effect,
+  Layer,
+  Logger,
+  FiberRef,
+  FiberRefs,
+  Cause,
+} from "effect";
 
 /**
  * Request context carrying identifiers for correlation
@@ -9,7 +17,9 @@ export interface RequestContext {
   readonly sessionId?: string;
 }
 
-export const RequestContext = Context.GenericTag<RequestContext>("@shipbox/shared/RequestContext");
+export const RequestContext = Context.GenericTag<RequestContext>(
+  "@shipbox/shared/RequestContext",
+);
 
 /**
  * Sentry-like interface to avoid direct dependency in shared
@@ -49,7 +59,10 @@ export interface LogEntry {
  */
 export const structuredLogger = Logger.make<unknown, void>((options) => {
   // Get the current context from FiberRefs
-  const context = FiberRefs.getOrDefault(options.context, FiberRef.currentContext);
+  const context = FiberRefs.getOrDefault(
+    options.context,
+    FiberRef.currentContext,
+  );
   const requestContext = Context.getOption(context, RequestContext);
   const sentry = FiberRefs.getOrDefault(options.context, currentSentry);
 
@@ -68,7 +81,7 @@ export const structuredLogger = Logger.make<unknown, void>((options) => {
     requestId = ctx.requestId;
     userId = ctx.userId;
     sessionId = ctx.sessionId;
-    
+
     logEntry.requestId = requestId;
     logEntry.userId = userId;
     logEntry.sessionId = sessionId;
@@ -77,7 +90,10 @@ export const structuredLogger = Logger.make<unknown, void>((options) => {
   // Record Sentry breadcrumb if client is available
   if (sentry) {
     sentry.addBreadcrumb({
-      message: typeof options.message === "string" ? options.message : JSON.stringify(options.message),
+      message:
+        typeof options.message === "string"
+          ? options.message
+          : JSON.stringify(options.message),
       level: options.logLevel.label.toLowerCase() as any,
       category: "log",
       data: {
@@ -95,23 +111,30 @@ export const structuredLogger = Logger.make<unknown, void>((options) => {
 /**
  * Layer to provide the structured logger
  */
-export const LoggerLayer = Logger.replace(Logger.defaultLogger, structuredLogger);
+export const LoggerLayer = Logger.replace(
+  Logger.defaultLogger,
+  structuredLogger,
+);
 
 /**
  * Utility to run an effect with RequestContext
  */
-export const withRequestContext = (
-  requestId: string,
-  userId?: string,
-  sessionId?: string
-) => <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  Effect.provideService(effect, RequestContext, { requestId, userId, sessionId });
+export const withRequestContext =
+  (requestId: string, userId?: string, sessionId?: string) =>
+  <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    Effect.provideService(effect, RequestContext, {
+      requestId,
+      userId,
+      sessionId,
+    });
 
 /**
  * Utility to provide Sentry client to an effect
  */
-export const withSentry = (sentry: SentryClient) => <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  Effect.locally(effect, currentSentry, sentry);
+export const withSentry =
+  (sentry: SentryClient) =>
+  <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    Effect.locally(effect, currentSentry, sentry);
 
 /**
  * Utility to report Effect failure to Sentry
@@ -119,13 +142,14 @@ export const withSentry = (sentry: SentryClient) => <A, E, R>(effect: Effect.Eff
 export const captureEffectError = <E>(
   cause: Cause.Cause<E>,
   sentry?: SentryClient,
-  context?: Record<string, any>
+  context?: Record<string, any>,
 ) => {
   if (!sentry) return;
 
   const error = Cause.failureOrCause(cause);
-  const exception = error._tag === "Left" ? error.left : new Error(Cause.pretty(cause));
-  
+  const exception =
+    error._tag === "Left" ? error.left : new Error(Cause.pretty(cause));
+
   sentry.captureException(exception, {
     extra: {
       ...context,

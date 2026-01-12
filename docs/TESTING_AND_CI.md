@@ -26,6 +26,7 @@ We run three kinds of tests. Each one exists because of a real production incide
 ```
 
 ### Unit Tests (The Fast Ones)
+
 **What they catch:** Typos. Off-by-one errors. That time someone changed a date format and broke invoicing.
 
 **Where they live:** `packages/shared`, React components, utility functions.
@@ -33,6 +34,7 @@ We run three kinds of tests. Each one exists because of a real production incide
 **How fast:** Milliseconds. You can run them on every keystroke if you want.
 
 ### Integration Tests (The Cloudflare Ones)
+
 **What they catch:** "Works on my machine" bugs. Durable Object state issues. API routes returning 500s.
 
 **Where they live:** `workers/api`, `sandbox-mcp`.
@@ -40,6 +42,7 @@ We run three kinds of tests. Each one exists because of a real production incide
 **The trick:** We use Cloudflare's `vitest-pool-workers` to run tests in an actual Workers runtime, not a fake Node.js environment. This catches bugs that only appear in production.
 
 ### E2E Tests (The Expensive Ones)
+
 **What they catch:** "The button is there but nothing happens." Auth flows. The full user journey.
 
 **Where they live:** `e2e/` folder.
@@ -52,13 +55,13 @@ We run three kinds of tests. Each one exists because of a real production incide
 
 GitHub Actions runs five parallel jobs. All must pass before merge:
 
-| Job | What It Does | Why It Matters |
-|-----|--------------|----------------|
-| **test-api** | Runs API worker tests | Catches broken endpoints |
-| **test-engine** | Runs sandbox-mcp tests | Catches orchestration bugs |
-| **test-frontend** | Runs React component tests | Catches UI regressions |
-| **test-e2e** | Full browser tests | Catches integration failures |
-| **test-docs** | Builds documentation site | Catches broken doc links |
+| Job               | What It Does               | Why It Matters               |
+| ----------------- | -------------------------- | ---------------------------- |
+| **test-api**      | Runs API worker tests      | Catches broken endpoints     |
+| **test-engine**   | Runs sandbox-mcp tests     | Catches orchestration bugs   |
+| **test-frontend** | Runs React component tests | Catches UI regressions       |
+| **test-e2e**      | Full browser tests         | Catches integration failures |
+| **test-docs**     | Builds documentation site  | Catches broken doc links     |
 
 If any fail, you'll see a red X. Click it to see what broke.
 

@@ -5,18 +5,18 @@
   --sl-color-accent-low: #082152;
   --sl-color-accent: #3b82f6;
   --sl-color-accent-high: #93c5fd;
-  
+
   /* Dark Background - Matching app's background */
   --sl-color-bg: #020617;
   --sl-color-bg-nav: #020617;
   --sl-color-bg-sidebar: #020617;
   --sl-color-bg-inline-code: #1e293b;
-  
+
   /* Text colors */
   --sl-color-text: #f8fafc;
   --sl-color-text-accent: #3b82f6;
   --sl-color-text-muted: #94a3b8;
-  
+
   /* Borders */
   --sl-color-border: #1e293b;
   --sl-color-hairline: #1e293b;
@@ -25,12 +25,13 @@
 
 /* Modern Typography */
 :root {
-  --sl-font-system: 'Inter', system-ui, -apple-system, sans-serif;
-  --sl-font-mono: 'JetBrains Mono', 'Roboto Mono', monospace;
+  --sl-font-system: "Inter", system-ui, -apple-system, sans-serif;
+  --sl-font-mono: "JetBrains Mono", "Roboto Mono", monospace;
 }
 
 /* Glassmorphism for Cards */
-.card, .sl-link-card {
+.card,
+.sl-link-card {
   background: rgba(30, 41, 59, 0.3) !important;
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.05) !important;
@@ -40,7 +41,8 @@
   flex-direction: column !important;
 }
 
-.card:hover, .sl-link-card:hover {
+.card:hover,
+.sl-link-card:hover {
   background: rgba(30, 41, 59, 0.5) !important;
   border-color: rgba(59, 130, 246, 0.3) !important;
   transform: translateY(-4px);
@@ -51,7 +53,11 @@
 .hero {
   padding-top: 5rem !important;
   padding-bottom: 5rem !important;
-  background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(59, 130, 246, 0.1) 0%,
+    transparent 50%
+  );
 }
 
 .hero .tagline {
@@ -108,16 +114,16 @@
     padding-bottom: 3rem !important;
     text-align: center;
   }
-  
+
   .hero .tagline {
     font-size: 1.125rem !important;
   }
-  
+
   .card-grid {
     grid-template-columns: 1fr !important;
     gap: 1rem !important;
   }
-  
+
   /* Make sure images in guide don't overflow */
   img {
     border-radius: 0.75rem;

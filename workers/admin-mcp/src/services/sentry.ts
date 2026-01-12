@@ -12,7 +12,9 @@ export interface SentryIssue {
 }
 
 export interface SentryServiceInterface {
-  readonly getRecentIssues: (project: string) => Effect.Effect<SentryIssue[], Error>;
+  readonly getRecentIssues: (
+    project: string,
+  ) => Effect.Effect<SentryIssue[], Error>;
 }
 
 export class SentryService extends Context.Tag("SentryService")<
@@ -20,7 +22,10 @@ export class SentryService extends Context.Tag("SentryService")<
   SentryServiceInterface
 >() {}
 
-function makeSentryService(authToken: string, org: string): SentryServiceInterface {
+function makeSentryService(
+  authToken: string,
+  org: string,
+): SentryServiceInterface {
   return {
     getRecentIssues: (project) =>
       Effect.tryPromise({
@@ -31,7 +36,7 @@ function makeSentryService(authToken: string, org: string): SentryServiceInterfa
               headers: {
                 Authorization: `Bearer ${authToken}`,
               },
-            }
+            },
           );
 
           if (!response.ok) {
@@ -55,6 +60,9 @@ function makeSentryService(authToken: string, org: string): SentryServiceInterfa
   };
 }
 
-export function makeSentryServiceLayer(authToken: string, org: string): Layer.Layer<SentryService> {
+export function makeSentryServiceLayer(
+  authToken: string,
+  org: string,
+): Layer.Layer<SentryService> {
   return Layer.succeed(SentryService, makeSentryService(authToken, org));
 }

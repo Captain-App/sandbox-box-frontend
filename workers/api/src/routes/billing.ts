@@ -6,15 +6,18 @@ import { EmailService, makeEmailServiceLayer } from "../services/email";
 import { Bindings, Variables } from "../index";
 import { LoggerLayer, withRequestContext } from "@shipbox/shared";
 
-export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+export const billingRoutes = new Hono<{
+  Bindings: Bindings;
+  Variables: Variables;
+}>()
   .get("/balance", async (c) => {
     const user = c.get("user");
     const billingLayer = makeBillingServiceLayer(c.env.DB);
     const result = await Effect.runPromise(
       BillingService.pipe(
         Effect.flatMap((service) => service.getBalance(user.id)),
-        Effect.provide(billingLayer)
-      )
+        Effect.provide(billingLayer),
+      ),
     );
     return c.json(result);
   })
@@ -25,24 +28,26 @@ export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
     const result = await Effect.runPromise(
       BillingService.pipe(
         Effect.flatMap((service) => service.getTransactions(user.id, limit)),
-        Effect.provide(billingLayer)
-      )
+        Effect.provide(billingLayer),
+      ),
     );
     return c.json(result);
   })
   .get("/consumption", async (c) => {
     const user = c.get("user");
     // Default to last 30 days
-    const periodStart = c.req.query("periodStart") 
-      ? parseInt(c.req.query("periodStart")!) 
-      : Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60);
-    
+    const periodStart = c.req.query("periodStart")
+      ? parseInt(c.req.query("periodStart")!)
+      : Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
+
     const billingLayer = makeBillingServiceLayer(c.env.DB);
     const result = await Effect.runPromise(
       BillingService.pipe(
-        Effect.flatMap((service) => service.getConsumption(user.id, periodStart)),
-        Effect.provide(billingLayer)
-      )
+        Effect.flatMap((service) =>
+          service.getConsumption(user.id, periodStart),
+        ),
+        Effect.provide(billingLayer),
+      ),
     );
     return c.json({ consumptionCredits: result });
   })
@@ -57,7 +62,7 @@ export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
     const stripeLayer = makeStripeServiceLayer(
       c.env.STRIPE_API_KEY,
       c.env.STRIPE_WEBHOOK_SECRET,
-      c.env.APP_URL || "https://shipbox.dev"
+      c.env.APP_URL || "https://shipbox.dev",
     );
     const billingLayer = makeBillingServiceLayer(c.env.DB);
 
@@ -66,11 +71,12 @@ export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
         const stripe = yield* StripeService;
         const billing = yield* BillingService;
         const customerId = yield* billing.getStripeCustomerId(user.id);
-        return yield* stripe.createCheckoutSession(user.id, amountCredits, customerId);
-      }).pipe(
-        Effect.provide(stripeLayer),
-        Effect.provide(billingLayer)
-      )
+        return yield* stripe.createCheckoutSession(
+          user.id,
+          amountCredits,
+          customerId,
+        );
+      }).pipe(Effect.provide(stripeLayer), Effect.provide(billingLayer)),
     );
 
     if (Exit.isFailure(result)) {
@@ -85,7 +91,7 @@ export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
     const stripeLayer = makeStripeServiceLayer(
       c.env.STRIPE_API_KEY,
       c.env.STRIPE_WEBHOOK_SECRET,
-      c.env.APP_URL || "https://shipbox.dev"
+      c.env.APP_URL || "https://shipbox.dev",
     );
     const billingLayer = makeBillingServiceLayer(c.env.DB);
 
@@ -94,21 +100,21 @@ export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
         const stripe = yield* StripeService;
         const billing = yield* BillingService;
         const customerId = yield* billing.getStripeCustomerId(user.id);
-        
+
         if (!customerId) {
-          return yield* Effect.fail(new Error("No Stripe customer found. Please make a payment first."));
+          return yield* Effect.fail(
+            new Error("No Stripe customer found. Please make a payment first."),
+          );
         }
 
         return yield* stripe.createPortalSession(customerId);
-      }).pipe(
-        Effect.provide(stripeLayer),
-        Effect.provide(billingLayer)
-      )
+      }).pipe(Effect.provide(stripeLayer), Effect.provide(billingLayer)),
     );
 
     if (Exit.isFailure(result)) {
       const error = Cause.failureOrCause(result.cause);
-      const message = error._tag === "Left" ? error.left.message : "Portal session failed";
+      const message =
+        error._tag === "Left" ? error.left.message : "Portal session failed";
       return c.json({ error: message }, 400);
     }
 
@@ -123,7 +129,7 @@ export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
     const stripeLayer = makeStripeServiceLayer(
       c.env.STRIPE_API_KEY,
       c.env.STRIPE_WEBHOOK_SECRET,
-      c.env.APP_URL || "https://shipbox.dev"
+      c.env.APP_URL || "https://shipbox.dev",
     );
     const billingLayer = makeBillingServiceLayer(c.env.DB);
     const emailLayer = makeEmailServiceLayer();
@@ -135,8 +141,9 @@ export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
         const billing = yield* BillingService;
         const emailService = yield* EmailService;
 
-        const { userId, amountCredits, customerId, email } = yield* stripe.handleWebhook(payload, signature);
-        
+        const { userId, amountCredits, customerId, email } =
+          yield* stripe.handleWebhook(payload, signature);
+
         // Only process if we have valid data (skip ignored events)
         if (userId && amountCredits > 0) {
           yield* billing.topUp(userId, amountCredits, "Stripe top-up");
@@ -146,25 +153,27 @@ export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
           if (email) {
             yield* emailService.sendReceipt(email, amountCredits);
           }
-          yield* Effect.log(`Credited ${amountCredits} to user ${userId} (Customer: ${customerId})`);
+          yield* Effect.log(
+            `Credited ${amountCredits} to user ${userId} (Customer: ${customerId})`,
+          );
         }
-        
+
         return { success: true };
       }).pipe(
         Effect.provide(stripeLayer),
         Effect.provide(billingLayer),
         Effect.provide(emailLayer),
         withRequestContext(requestId),
-        Effect.provide(LoggerLayer)
-      )
+        Effect.provide(LoggerLayer),
+      ),
     );
 
     if (Exit.isFailure(result)) {
       await Effect.runPromise(
         Effect.logError("Billing webhook error", result.cause).pipe(
           withRequestContext(requestId),
-          Effect.provide(LoggerLayer)
-        )
+          Effect.provide(LoggerLayer),
+        ),
       );
       return c.json({ error: "Webhook processing failed" }, 500);
     }

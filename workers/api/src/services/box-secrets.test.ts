@@ -18,15 +18,15 @@ describe("BoxSecretsService", () => {
   it("should create and list secrets", async () => {
     const db = createMockD1();
     const layer = makeBoxSecretsServiceLayer(db, MASTER_KEY);
-    
+
     const program = Effect.gen(function* () {
       const service = yield* BoxSecretsService;
       yield* service.createSecret(USER_ID, SECRET_NAME, SECRET_VALUE);
       return yield* service.listSecrets(USER_ID);
     });
-    
+
     const result = await Effect.runPromise(Effect.provide(program, layer));
-    
+
     expect(result.length).toBe(1);
     expect(result[0].name).toBe(SECRET_NAME);
     expect(result[0].hint).toBe("...cdef");
@@ -36,19 +36,23 @@ describe("BoxSecretsService", () => {
   it("should retrieve secret value with decryption", async () => {
     const db = createMockD1();
     const layer = makeBoxSecretsServiceLayer(db, MASTER_KEY);
-    
+
     const program = Effect.gen(function* () {
       const service = yield* BoxSecretsService;
-      const secret = yield* service.createSecret(USER_ID, SECRET_NAME, SECRET_VALUE);
+      const secret = yield* service.createSecret(
+        USER_ID,
+        SECRET_NAME,
+        SECRET_VALUE,
+      );
       const retrieved = yield* service.getSecretValue(USER_ID, secret.id);
       return { retrieved, secretId: secret.id };
     });
-    
+
     const result = await Effect.runPromise(Effect.provide(program, layer));
-    
+
     expect(Option.isSome(result.retrieved)).toBe(true);
     expect(result.retrieved.value).toBe(SECRET_VALUE);
-    
+
     // Check if last_used was updated in mock store
     const store = (db as any)._store.get("user_box_secrets");
     expect(store[0].last_used).toBeDefined();
@@ -57,12 +61,12 @@ describe("BoxSecretsService", () => {
   it("should return None for non-existent secret", async () => {
     const db = createMockD1();
     const layer = makeBoxSecretsServiceLayer(db, MASTER_KEY);
-    
+
     const program = Effect.gen(function* () {
       const service = yield* BoxSecretsService;
       return yield* service.getSecretValue(USER_ID, "non-existent-id");
     });
-    
+
     const result = await Effect.runPromise(Effect.provide(program, layer));
     expect(Option.isNone(result)).toBe(true);
   });
@@ -70,14 +74,18 @@ describe("BoxSecretsService", () => {
   it("should delete a secret", async () => {
     const db = createMockD1();
     const layer = makeBoxSecretsServiceLayer(db, MASTER_KEY);
-    
+
     const program = Effect.gen(function* () {
       const service = yield* BoxSecretsService;
-      const secret = yield* service.createSecret(USER_ID, SECRET_NAME, SECRET_VALUE);
+      const secret = yield* service.createSecret(
+        USER_ID,
+        SECRET_NAME,
+        SECRET_VALUE,
+      );
       yield* service.deleteSecret(USER_ID, secret.id);
       return yield* service.listSecrets(USER_ID);
     });
-    
+
     const result = await Effect.runPromise(Effect.provide(program, layer));
     expect(result.length).toBe(0);
   });

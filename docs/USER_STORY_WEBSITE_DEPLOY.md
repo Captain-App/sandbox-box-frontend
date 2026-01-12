@@ -17,6 +17,7 @@ The AI assistant calls `opencode_run_task`, which spins up a new Cloudflare Sand
 ## 2. Autonomous Development
 
 Within the sandbox, the OpenCode agent gets to work:
+
 - It initializes a new project directory: `/workspace/taskflow-landing`.
 - It creates a `package.json` and installs dependencies.
 - It writes a modern `index.ts` Worker file that serves a beautiful, responsive HTML page.
@@ -47,7 +48,8 @@ Alex is thrilled with the result:
 
 > "This is perfect. Let's go live!"
 
-The agent calls `opencode_deploy_worker(workerPath: "/workspace/taskflow-landing/src/index.ts")`. 
+The agent calls `opencode_deploy_worker(workerPath: "/workspace/taskflow-landing/src/index.ts")`.
+
 - Shipbox triggers a production bundle using `esbuild` within the sandbox.
 - The bundled code is securely uploaded to the Cloudflare Workers for Platforms dispatch namespace.
 - Real credentials (Alex's account tokens) are injected by the Shipbox proxy, so they never touch the sandbox.
@@ -59,6 +61,7 @@ The agent responds:
 ## 6. Exploring the Platform
 
 Alex now explores the rest of the platform:
+
 - **Observability**: Alex checks the Honeycomb traces for the deployment to see how it performed.
 - **Persistence**: Alex closes their laptop. An hour later, they resume the session on their phone. Shipbox has restored the sandbox state from R2, allowing the agent to pick up exactly where it left off.
 - **Security**: Alex knows that even if the AI agent tried to access their GitHub tokens or Cloudflare keys directly, it wouldn't find them—they only exist in the zero-trust proxy.

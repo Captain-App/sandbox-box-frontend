@@ -1,11 +1,13 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 export const adminApi = {
-  baseUrl: import.meta.env.VITE_API_URL || 'https://backend.shipbox.dev/admin',
-  
+  baseUrl: import.meta.env.VITE_API_URL || "https://backend.shipbox.dev/admin",
+
   async getAuthToken() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || '';
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session?.access_token || "";
   },
 
   async fetch(path: string, options: RequestInit = {}) {
@@ -14,14 +16,14 @@ export const adminApi = {
       ...options,
       headers: {
         ...options.headers,
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
     });
 
     if (res.status === 401 || res.status === 403) {
       // Don't auto-logout here, let AuthContext handle it if needed
-      throw new Error('Unauthorized');
+      throw new Error("Unauthorized");
     }
 
     if (!res.ok) {
@@ -33,7 +35,7 @@ export const adminApi = {
   },
 
   async getStats() {
-    return this.fetch('/stats');
+    return this.fetch("/stats");
   },
 
   async searchUsers(query: string) {
@@ -53,8 +55,11 @@ export const adminApi = {
   },
 
   async listTransactions(userId?: string, limit = 50, offset = 0) {
-    const params = new URLSearchParams({ limit: limit.toString(), offset: offset.toString() });
-    if (userId) params.append('userId', userId);
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    if (userId) params.append("userId", userId);
     return this.fetch(`/transactions?${params.toString()}`);
   },
 
@@ -64,5 +69,5 @@ export const adminApi = {
 
   async getSessionMetadata(sessionId: string) {
     return this.fetch(`/sessions/${sessionId}/metadata`);
-  }
+  },
 };

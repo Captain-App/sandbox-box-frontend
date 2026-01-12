@@ -29,10 +29,10 @@ We use three systems that work together:
 
 Every exception, crash, and unhandled rejection ends up in Sentry. We run two projects:
 
-| Project | Covers |
-|---------|--------|
-| `shipbox-api` | The main API worker (auth, billing, sessions) |
-| `shipbox-engine` | The sandbox orchestration engine |
+| Project          | Covers                                        |
+| ---------------- | --------------------------------------------- |
+| `shipbox-api`    | The main API worker (auth, billing, sessions) |
+| `shipbox-engine` | The sandbox orchestration engine              |
 
 ### What Gets Captured
 
@@ -48,7 +48,7 @@ Every worker wraps its fetch handler with `@sentry/cloudflare`:
 ```typescript
 export default sentryWrapper(
   (env) => ({ dsn: env.SENTRY_DSN, tracesSampleRate: 1.0 }),
-  { fetch: app.fetch }
+  { fetch: app.fetch },
 );
 ```
 
@@ -72,7 +72,7 @@ Sentry.captureException(error, {
 
 ## Honeycomb: "What Happened Before It Broke?"
 
-Sentry tells you *what* broke. Honeycomb tells you *why* — the full request trace across services.
+Sentry tells you _what_ broke. Honeycomb tells you _why_ — the full request trace across services.
 
 ### Distributed Tracing
 
@@ -97,28 +97,25 @@ Every request flows through multiple services. Honeycomb stitches them together:
 We use `@microlabs/otel-cf-workers` to instrument Workers:
 
 ```typescript
-export default instrument(
-  sentryWrappedHandler,
-  (env) => ({
-    exporter: {
-      url: "https://api.honeycomb.io/v1/traces",
-      headers: {
-        "x-honeycomb-team": env.HONEYCOMB_API_KEY,
-        "x-honeycomb-dataset": "shipbox-api", // or shipbox-engine
-      },
+export default instrument(sentryWrappedHandler, (env) => ({
+  exporter: {
+    url: "https://api.honeycomb.io/v1/traces",
+    headers: {
+      "x-honeycomb-team": env.HONEYCOMB_API_KEY,
+      "x-honeycomb-dataset": "shipbox-api", // or shipbox-engine
     },
-    service: { name: "shipbox-api" },
-  })
-);
+  },
+  service: { name: "shipbox-api" },
+}));
 ```
 
 ### Datasets
 
-| Dataset | What's In It |
-|---------|--------------|
-| `shipbox-api` | Auth, billing, session management, GitHub webhooks |
+| Dataset          | What's In It                                       |
+| ---------------- | -------------------------------------------------- |
+| `shipbox-api`    | Auth, billing, session management, GitHub webhooks |
 | `shipbox-engine` | Sandbox orchestration, OpenCode runs, MCP protocol |
-| `shipbox-admin` | Admin MCP operations |
+| `shipbox-admin`  | Admin MCP operations                               |
 
 ---
 
@@ -130,22 +127,22 @@ Here's the interesting one. Instead of opening Sentry and Honeycomb in browser t
 
 The Admin MCP server (`workers/admin-mcp`) exposes tools that let Cursor (or any MCP client) introspect the live system:
 
-| Tool | What It Returns |
-|------|-----------------|
-| `admin_get_stats` | High-level metrics: users, sessions, revenue |
-| `admin_list_users` | User list with balances and activity |
-| `admin_list_sessions` | All sessions with status |
-| `admin_list_r2_sessions` | Sessions from R2 storage (most accurate) |
-| `admin_get_session_metadata` | Full metadata for a specific session |
-| `admin_get_session_logs` | Recent command logs for a session |
-| `admin_list_transactions` | Recent billing transactions |
-| `admin_get_errors` | **Unresolved Sentry issues** (pulls from Sentry API) |
-| `admin_list_recent_traces` | **Recent Honeycomb traces** |
-| `admin_get_trace` | **Full trace details** from Honeycomb |
-| `admin_get_session_traces` | All traces for a session |
-| `admin_check_health` | Ping all services, return latencies |
-| `admin_create_session` | Create a new sandbox session |
-| `admin_call_engine_mcp` | Proxy MCP calls to the engine |
+| Tool                         | What It Returns                                      |
+| ---------------------------- | ---------------------------------------------------- |
+| `admin_get_stats`            | High-level metrics: users, sessions, revenue         |
+| `admin_list_users`           | User list with balances and activity                 |
+| `admin_list_sessions`        | All sessions with status                             |
+| `admin_list_r2_sessions`     | Sessions from R2 storage (most accurate)             |
+| `admin_get_session_metadata` | Full metadata for a specific session                 |
+| `admin_get_session_logs`     | Recent command logs for a session                    |
+| `admin_list_transactions`    | Recent billing transactions                          |
+| `admin_get_errors`           | **Unresolved Sentry issues** (pulls from Sentry API) |
+| `admin_list_recent_traces`   | **Recent Honeycomb traces**                          |
+| `admin_get_trace`            | **Full trace details** from Honeycomb                |
+| `admin_get_session_traces`   | All traces for a session                             |
+| `admin_check_health`         | Ping all services, return latencies                  |
+| `admin_create_session`       | Create a new sandbox session                         |
+| `admin_call_engine_mcp`      | Proxy MCP calls to the engine                        |
 
 ### Why This Matters
 
@@ -154,6 +151,7 @@ Traditional debugging: Open Sentry → Find error → Copy trace ID → Open Hon
 With Admin MCP: "Hey Claude, what errors happened in the last hour? Show me the trace for the failing request."
 
 The LLM can:
+
 1. Call `admin_get_errors` to see Sentry issues
 2. Call `admin_get_trace` with the trace ID
 3. Call `admin_get_session_metadata` if it involves a session
@@ -201,24 +199,28 @@ Add to your MCP client config (e.g., Cursor's `mcp.json`):
 User reports: "My sandbox won't start."
 
 **Step 1: Check recent errors**
+
 ```
 Claude: Uses admin_get_errors to check Sentry
 → Finds: "SandboxStartTimeout" error for session abc123
 ```
 
 **Step 2: Get the trace**
+
 ```
 Claude: Uses admin_get_session_traces with sessionId=abc123
 → Finds trace showing: Workflow started → Sandbox creation → 30s timeout
 ```
 
 **Step 3: Check session state**
+
 ```
 Claude: Uses admin_get_session_metadata with sessionId=abc123
 → Finds: status="creating", no workspace cloned, no backup restored
 ```
 
 **Step 4: Diagnose**
+
 ```
 Claude: "The sandbox timed out during initial creation.
 The trace shows the container started but OpenCode
@@ -233,19 +235,20 @@ All without leaving the IDE.
 
 These need to be set as secrets in each worker:
 
-| Variable | Where | Purpose |
-|----------|-------|---------|
-| `SENTRY_DSN` | All workers | Sentry project DSN |
-| `HONEYCOMB_API_KEY` | All workers | Send traces to Honeycomb |
-| `HONEYCOMB_DATASET` | All workers | Dataset name |
-| `SENTRY_AUTH_TOKEN` | Admin MCP only | Query Sentry API |
-| `SENTRY_ORG` | Admin MCP only | Sentry org slug |
+| Variable            | Where          | Purpose                  |
+| ------------------- | -------------- | ------------------------ |
+| `SENTRY_DSN`        | All workers    | Sentry project DSN       |
+| `HONEYCOMB_API_KEY` | All workers    | Send traces to Honeycomb |
+| `HONEYCOMB_DATASET` | All workers    | Dataset name             |
+| `SENTRY_AUTH_TOKEN` | Admin MCP only | Query Sentry API         |
+| `SENTRY_ORG`        | Admin MCP only | Sentry org slug          |
 
 ---
 
 ## The Point
 
 Observability isn't about collecting data. It's about answering questions fast:
+
 - **Sentry**: "What exception just happened?"
 - **Honeycomb**: "What was the request doing when it failed?"
 - **Admin MCP**: "Let me just ask the system directly."

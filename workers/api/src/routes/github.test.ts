@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock cloudflare-specific imports before importing index
 vi.mock("@microlabs/otel-cf-workers", () => ({
   instrument: (handler: any) => ({
-    fetch: (request: Request, env: any, ctx: any) => handler.fetch(request, env, ctx)
+    fetch: (request: Request, env: any, ctx: any) =>
+      handler.fetch(request, env, ctx),
   }),
 }));
 
@@ -44,31 +45,48 @@ describe("GitHub Routes", () => {
       SUPABASE_URL: "https://supabase",
       SUPABASE_ANON_KEY: "anon-key",
     };
-    
+
     // Mock global fetch
     vi.stubGlobal("fetch", async (url: string) => {
       if (url.endsWith("/auth/v1/user")) {
-        return new Response(JSON.stringify({ id: "user-123" }), { status: 200 });
+        return new Response(JSON.stringify({ id: "user-123" }), {
+          status: 200,
+        });
       }
       if (url.includes("api.github.com/app/installations/")) {
-        return new Response(JSON.stringify({ 
-          account: { login: "crew", type: "User" } 
-        }), { status: 200 });
+        return new Response(
+          JSON.stringify({
+            account: { login: "crew", type: "User" },
+          }),
+          { status: 200 },
+        );
       }
       if (url.includes("/access_tokens")) {
-        return new Response(JSON.stringify({ token: "gh-token" }), { status: 200 });
+        return new Response(JSON.stringify({ token: "gh-token" }), {
+          status: 200,
+        });
       }
       if (url.includes("/installation/repositories")) {
-        return new Response(JSON.stringify({ 
-          repositories: [{ id: 1, name: "repo1", full_name: "crew/repo1", html_url: "https://github.com/crew/repo1" }] 
-        }), { status: 200 });
+        return new Response(
+          JSON.stringify({
+            repositories: [
+              {
+                id: 1,
+                name: "repo1",
+                full_name: "crew/repo1",
+                html_url: "https://github.com/crew/repo1",
+              },
+            ],
+          }),
+          { status: 200 },
+        );
       }
       return new Response("Not found", { status: 404 });
     });
   });
 
   const authHeaders = {
-    "Authorization": "Bearer valid-token",
+    Authorization: "Bearer valid-token",
   };
 
   it("GET /github/install should return installation url", async () => {
@@ -76,11 +94,11 @@ describe("GitHub Routes", () => {
       new Request("http://localhost/github/install", {
         headers: authHeaders,
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    const data = await res.json() as { url: string };
+    const data = (await res.json()) as { url: string };
     expect(data.url).toContain("github.com/apps/shipbox/installations/new");
     expect(data.url).toContain("state=user-123");
   });
@@ -92,19 +110,19 @@ describe("GitHub Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ installationId: "12345" }),
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    
+
     // Verify status
     const statusRes = await app.fetch(
       new Request("http://localhost/github/status", {
         headers: authHeaders,
       }),
-      env
+      env,
     );
-    const status = await statusRes.json() as any;
+    const status = (await statusRes.json()) as any;
     expect(status.accountLogin).toBe("crew");
   });
 
@@ -116,18 +134,18 @@ describe("GitHub Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ installationId: "12345" }),
       }),
-      env
+      env,
     );
 
     const res = await app.fetch(
       new Request("http://localhost/github/repos", {
         headers: authHeaders,
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    const repos = await res.json() as any[];
+    const repos = (await res.json()) as any[];
     expect(repos.length).toBe(1);
     expect(repos[0].name).toBe("repo1");
   });
@@ -140,7 +158,7 @@ describe("GitHub Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ installationId: "12345" }),
       }),
-      env
+      env,
     );
 
     const res = await app.fetch(
@@ -148,19 +166,19 @@ describe("GitHub Routes", () => {
         method: "DELETE",
         headers: authHeaders,
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    
+
     // Verify disconnected
     const statusRes = await app.fetch(
       new Request("http://localhost/github/status", {
         headers: authHeaders,
       }),
-      env
+      env,
     );
-    const status = await statusRes.json() as any;
+    const status = (await statusRes.json()) as any;
     expect(status).toBeNull();
   });
 });

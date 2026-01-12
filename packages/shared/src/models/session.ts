@@ -15,7 +15,13 @@ export const GITHUB_URL_PREFIX = "https://github.com/";
 /**
  * Valid session status values
  */
-export const SessionStatus = Schema.Literal("creating", "active", "idle", "stopped", "error");
+export const SessionStatus = Schema.Literal(
+  "creating",
+  "active",
+  "idle",
+  "stopped",
+  "error",
+);
 export type SessionStatus = typeof SessionStatus.Type;
 
 /**
@@ -70,7 +76,7 @@ export type SessionMetadata = typeof SessionMetadata.Type;
  * Frontend-specific view of a Sandbox
  * Maps sessionId to id for consistency with typical frontend patterns
  */
-export interface Sandbox extends Omit<SessionMetadata, 'sessionId'> {
+export interface Sandbox extends Omit<SessionMetadata, "sessionId"> {
   id: string; // maps to sessionId
   sessionId: string;
   // Frontend display fields

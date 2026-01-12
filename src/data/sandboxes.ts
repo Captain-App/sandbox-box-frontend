@@ -1,4 +1,9 @@
-export type SandboxStatus = 'online' | 'offline' | 'killed' | 'starting' | 'creating';
+export type SandboxStatus =
+  | "online"
+  | "offline"
+  | "killed"
+  | "starting"
+  | "creating";
 
 export interface Sandbox {
   id: string;

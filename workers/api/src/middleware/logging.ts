@@ -31,8 +31,8 @@ export const loggingMiddleware = (): MiddlewareHandler => async (c, next) => {
       Effect.log(`--> ${method} ${path}`),
       withRequestContext(requestId),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 
   await next();
@@ -52,7 +52,7 @@ export const loggingMiddleware = (): MiddlewareHandler => async (c, next) => {
       Effect.log(`<-- ${method} ${path} ${status} (${duration}ms)`),
       withRequestContext(requestId, user?.id),
       withSentry(Sentry as any),
-      Effect.provide(LoggerLayer)
-    )
+      Effect.provide(LoggerLayer),
+    ),
   );
 };

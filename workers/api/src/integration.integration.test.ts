@@ -1,7 +1,4 @@
-import {
-  env,
-  SELF,
-} from "cloudflare:test";
+import { env, SELF } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
 
 // This file uses Miniflare to run real integration tests against the worker
@@ -54,12 +51,14 @@ describe("Worker Integration Tests (Miniflare)", () => {
         )
       `),
     ];
-    
+
     await env.DB.batch(statements);
-    
+
     await env.DB.prepare(
-      `INSERT OR REPLACE INTO user_balances (user_id, balance_credits, updated_at) VALUES (?, ?, ?)`
-    ).bind('test-user-123', 5000, Math.floor(Date.now() / 1000)).run();
+      `INSERT OR REPLACE INTO user_balances (user_id, balance_credits, updated_at) VALUES (?, ?, ?)`,
+    )
+      .bind("test-user-123", 5000, Math.floor(Date.now() / 1000))
+      .run();
   });
 
   it("GET /health returns OK", async () => {
@@ -86,7 +85,7 @@ describe("Worker Integration Tests (Miniflare)", () => {
     // Webhooks don't require Bearer auth (they use signature verification)
     const response = await SELF.fetch("http://localhost/billing/webhook", {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
         "stripe-signature": "t=123,v1=abc",
       },
@@ -104,7 +103,7 @@ describe("Worker Integration Tests (Miniflare)", () => {
   it("POST /github/webhook accepts requests without auth", async () => {
     const response = await SELF.fetch("http://localhost/github/webhook", {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
         "x-github-event": "ping",
         "x-hub-signature-256": "sha256=abc", // Provide a signature (will fail verification but bypass auth)
@@ -129,42 +128,52 @@ describe("Worker Integration Tests (Miniflare)", () => {
 
   it("POST /internal/report-token-usage updates balance", async () => {
     const userId = "test-user-123";
-    
-    const response = await SELF.fetch("http://localhost/internal/report-token-usage", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId,
-        sessionId: "sess-1",
-        service: "anthropic",
-        inputTokens: 1000,
-        outputTokens: 1000,
-        model: "claude-3-5-sonnet",
-      }),
-    });
-    
+
+    const response = await SELF.fetch(
+      "http://localhost/internal/report-token-usage",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          sessionId: "sess-1",
+          service: "anthropic",
+          inputTokens: 1000,
+          outputTokens: 1000,
+          model: "claude-3-5-sonnet",
+        }),
+      },
+    );
+
     expect(response.status).toBe(200);
-    
+
     // Check balance was updated in D1
-    const result = await env.DB.prepare("SELECT balance_credits FROM user_balances WHERE user_id = ?")
+    const result = await env.DB.prepare(
+      "SELECT balance_credits FROM user_balances WHERE user_id = ?",
+    )
       .bind(userId)
       .first();
-    
+
     // 5000 - 6 credits (1 for input, 5 for output) = 4994
     expect(result?.balance_credits).toBe(4994);
   });
 
   it("GET /internal/user-config/:userId returns user keys", async () => {
     const userId = "test-user-123";
-    
-    // Seed key
-    await env.DB.prepare("INSERT INTO user_api_keys (user_id, anthropic_key_encrypted, key_hint, created_at) VALUES (?, ?, ?, ?)")
-      .bind(userId, "enc-key", "sk-ant-...", Date.now()).run();
 
-    const response = await SELF.fetch(`http://localhost/internal/user-config/${userId}`);
+    // Seed key
+    await env.DB.prepare(
+      "INSERT INTO user_api_keys (user_id, anthropic_key_encrypted, key_hint, created_at) VALUES (?, ?, ?, ?)",
+    )
+      .bind(userId, "enc-key", "sk-ant-...", Date.now())
+      .run();
+
+    const response = await SELF.fetch(
+      `http://localhost/internal/user-config/${userId}`,
+    );
     expect(response.status).toBe(200);
-    
-    const data = await response.json() as any;
+
+    const data = (await response.json()) as any;
     expect(data.anthropicKey).toBeDefined();
   });
 });

@@ -1,9 +1,9 @@
-import { getApiKey, getBaseUrl } from './config.js';
+import { getApiKey, getBaseUrl } from "./config.js";
 
 export interface Session {
   id: string;
   sessionId: string;
-  status: 'started' | 'running' | 'completed' | 'failed';
+  status: "started" | "running" | "completed" | "failed";
   task?: string;
   repository?: string;
   branch?: string;
@@ -24,33 +24,42 @@ export class ShipboxApi {
   constructor() {
     const key = getApiKey();
     if (!key) {
-      throw new Error('API key not found. Please run `shipbox config set api-key <key>` or set SHIPBOX_API_KEY environment variable.');
+      throw new Error(
+        "API key not found. Please run `shipbox config set api-key <key>` or set SHIPBOX_API_KEY environment variable.",
+      );
     }
     this.apiKey = key;
     this.baseUrl = getBaseUrl();
   }
 
-  private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const response = await fetch(url, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
         ...options.headers,
       },
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(`API Error (${response.status}): ${error.error || response.statusText}`);
+      const error = await response
+        .json()
+        .catch(() => ({ error: response.statusText }));
+      throw new Error(
+        `API Error (${response.status}): ${error.error || response.statusText}`,
+      );
     }
 
     return response.json() as Promise<T>;
   }
 
   async listSessions(): Promise<Session[]> {
-    return this.request<Session[]>('/sessions');
+    return this.request<Session[]>("/sessions");
   }
 
   async getSession(id: string): Promise<Session> {
@@ -58,21 +67,21 @@ export class ShipboxApi {
   }
 
   async createSession(params: CreateSessionParams): Promise<Session> {
-    return this.request<Session>('/sessions', {
-      method: 'POST',
+    return this.request<Session>("/sessions", {
+      method: "POST",
       body: JSON.stringify(params),
     });
   }
 
   async deleteSession(id: string): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/sessions/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
   async startSession(id: string): Promise<any> {
     return this.request(`/sessions/${id}/start`, {
-      method: 'POST',
+      method: "POST",
     });
   }
 }

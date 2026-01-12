@@ -12,7 +12,12 @@ export const TASK_MAX_LENGTH = 50000;
  * - completed: Finished successfully
  * - failed: Finished with error
  */
-export const RunStatus = Schema.Literal("started", "running", "completed", "failed");
+export const RunStatus = Schema.Literal(
+  "started",
+  "running",
+  "completed",
+  "failed",
+);
 export type RunStatus = typeof RunStatus.Type;
 
 /**
@@ -28,7 +33,12 @@ export type RunResult = typeof RunResult.Type;
 /**
  * Status of an individual workflow step
  */
-export const StepStatus = Schema.Literal("pending", "running", "completed", "failed");
+export const StepStatus = Schema.Literal(
+  "pending",
+  "running",
+  "completed",
+  "failed",
+);
 export type StepStatus = typeof StepStatus.Type;
 
 /**
@@ -56,6 +66,9 @@ export const RunRecord = Schema.Struct({
   completedAt: Schema.optionalWith(Schema.Number, { exact: true }),
   result: Schema.optionalWith(RunResult, { exact: true }),
   currentStep: Schema.optionalWith(Schema.String, { exact: true }),
-  phases: Schema.optionalWith(Schema.Record({ key: Schema.String, value: RunPhase }), { exact: true }),
+  phases: Schema.optionalWith(
+    Schema.Record({ key: Schema.String, value: RunPhase }),
+    { exact: true },
+  ),
 });
 export type RunRecord = typeof RunRecord.Type;

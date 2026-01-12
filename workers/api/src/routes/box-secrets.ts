@@ -1,9 +1,15 @@
 import { Hono } from "hono";
 import { Effect, Exit } from "effect";
-import { BoxSecretsService, makeBoxSecretsServiceLayer } from "../services/box-secrets";
+import {
+  BoxSecretsService,
+  makeBoxSecretsServiceLayer,
+} from "../services/box-secrets";
 import { Bindings, Variables } from "../index";
 
-export const boxSecretsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+export const boxSecretsRoutes = new Hono<{
+  Bindings: Bindings;
+  Variables: Variables;
+}>()
   .get("/", async (c) => {
     const user = c.get("user");
     const layer = makeBoxSecretsServiceLayer(c.env.DB, c.env.PROXY_JWT_SECRET);
@@ -12,7 +18,7 @@ export const boxSecretsRoutes = new Hono<{ Bindings: Bindings; Variables: Variab
       Effect.gen(function* () {
         const service = yield* BoxSecretsService;
         return yield* service.listSecrets(user.id);
-      }).pipe(Effect.provide(layer))
+      }).pipe(Effect.provide(layer)),
     );
 
     if (Exit.isFailure(result)) {
@@ -34,7 +40,7 @@ export const boxSecretsRoutes = new Hono<{ Bindings: Bindings; Variables: Variab
       Effect.gen(function* () {
         const service = yield* BoxSecretsService;
         return yield* service.createSecret(user.id, name, value);
-      }).pipe(Effect.provide(layer))
+      }).pipe(Effect.provide(layer)),
     );
 
     if (Exit.isFailure(result)) {
@@ -52,7 +58,7 @@ export const boxSecretsRoutes = new Hono<{ Bindings: Bindings; Variables: Variab
       Effect.gen(function* () {
         const service = yield* BoxSecretsService;
         yield* service.deleteSecret(user.id, id);
-      }).pipe(Effect.provide(layer))
+      }).pipe(Effect.provide(layer)),
     );
 
     if (Exit.isFailure(result)) {

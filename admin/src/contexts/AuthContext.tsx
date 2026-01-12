@@ -1,6 +1,12 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import type { User, Session } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase";
 
 interface AuthContextType {
   user: User | null;
@@ -27,16 +33,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkAdminRole = async (userId: string, token: string) => {
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || 'https://app.captainapp.co.uk'}/rest/v1/user_roles?user_id=eq.${userId}&role=eq.admin&select=role`,
+        `${import.meta.env.VITE_SUPABASE_URL || "https://app.captainapp.co.uk"}/rest/v1/user_roles?user_id=eq.${userId}&role=eq.admin&select=role`,
         {
           headers: {
-            "Authorization": `Bearer ${token}`,
-            "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqYmNqa2loeHNrdXd3ZmRxa2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3MDU2OTAsImV4cCI6MjA2NjI4MTY5MH0.V9e7XsuTlTOLqefOIedTqlBiTxUSn4O5FZSPWwAxiSI',
-          }
-        }
+            Authorization: `Bearer ${token}`,
+            apikey:
+              import.meta.env.VITE_SUPABASE_ANON_KEY ||
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqYmNqa2loeHNrdXd3ZmRxa2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3MDU2OTAsImV4cCI6MjA2NjI4MTY5MH0.V9e7XsuTlTOLqefOIedTqlBiTxUSn4O5FZSPWwAxiSI",
+          },
+        },
       );
       if (res.ok) {
-        const roles = await res.json() as any[];
+        const roles = (await res.json()) as any[];
         setIsAdmin(roles.length > 0);
       } else {
         setIsAdmin(false);
@@ -59,7 +67,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user && session.access_token) {

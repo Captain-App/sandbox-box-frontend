@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock cloudflare-specific imports before importing index
 vi.mock("@microlabs/otel-cf-workers", () => ({
   instrument: (handler: any) => ({
-    fetch: (request: Request, env: any, ctx: any) => handler.fetch(request, env, ctx)
+    fetch: (request: Request, env: any, ctx: any) =>
+      handler.fetch(request, env, ctx),
   }),
 }));
 
@@ -36,20 +37,27 @@ describe("Sessions Routes", () => {
     };
 
     // Pre-populate user balance so quota check passes
-    mockD1.prepare("INSERT INTO user_balances (user_id, balance_credits, updated_at) VALUES (?, ?, ?)")
-      .bind("user-123", 1000, Date.now()).run();
-    
+    mockD1
+      .prepare(
+        "INSERT INTO user_balances (user_id, balance_credits, updated_at) VALUES (?, ?, ?)",
+      )
+      .bind("user-123", 1000, Date.now())
+      .run();
+
     // Mock global fetch for Supabase auth
     vi.stubGlobal("fetch", async (url: string) => {
       if (url.endsWith("/auth/v1/user")) {
-        return new Response(JSON.stringify({ id: "user-123", email: "test@example.com" }), { status: 200 });
+        return new Response(
+          JSON.stringify({ id: "user-123", email: "test@example.com" }),
+          { status: 200 },
+        );
       }
       return new Response("Not found", { status: 404 });
     });
   });
 
   const authHeaders = {
-    "Authorization": "Bearer valid-token",
+    Authorization: "Bearer valid-token",
   };
 
   it("POST /sessions should create a session and register ownership", async () => {
@@ -59,17 +67,21 @@ describe("Sessions Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ name: "Test Box", region: "lhr" }),
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json() as any;
+    const body = (await res.json()) as any;
     expect(body.sessionId).toBeDefined();
     expect(body.id).toBe(body.sessionId);
 
     // Verify ownership registered in D1
-    const ownership = await mockD1.prepare("SELECT 1 FROM user_sessions WHERE user_id = ? AND session_id = ?")
-      .bind("user-123", body.sessionId).first();
+    const ownership = await mockD1
+      .prepare(
+        "SELECT 1 FROM user_sessions WHERE user_id = ? AND session_id = ?",
+      )
+      .bind("user-123", body.sessionId)
+      .first();
     expect(ownership).toBeDefined();
   });
 
@@ -81,21 +93,21 @@ describe("Sessions Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ name: "Box 1", region: "lhr" }),
       }),
-      env
+      env,
     );
     expect(createRes.status).toBe(201);
-    const created = await createRes.json() as any;
+    const created = (await createRes.json()) as any;
 
     // 2. List sessions
     const res = await app.fetch(
       new Request("http://localhost/sessions", {
         headers: authHeaders,
       }),
-      env
+      env,
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json() as any[];
+    const body = (await res.json()) as any[];
     expect(body.length).toBe(1);
     expect(body[0].sessionId).toBe(created.sessionId);
     expect(body[0].title).toBe("Box 1");
@@ -109,24 +121,26 @@ describe("Sessions Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ name: "Box 1", region: "lhr" }),
       }),
-      env
+      env,
     );
     expect(createRes.status).toBe(201);
-    const created = await createRes.json() as any;
+    const created = (await createRes.json()) as any;
 
     // Try to access as user-123 (success)
     const res = await app.fetch(
       new Request(`http://localhost/sessions/${created.sessionId}`, {
         headers: authHeaders,
       }),
-      env
+      env,
     );
     expect(res.status).toBe(200);
 
     // Mock different user
     vi.stubGlobal("fetch", async (url: string) => {
       if (url.endsWith("/auth/v1/user")) {
-        return new Response(JSON.stringify({ id: "other-user" }), { status: 200 });
+        return new Response(JSON.stringify({ id: "other-user" }), {
+          status: 200,
+        });
       }
       return new Response("Not found", { status: 404 });
     });
@@ -136,7 +150,7 @@ describe("Sessions Routes", () => {
       new Request(`http://localhost/sessions/${created.sessionId}`, {
         headers: authHeaders,
       }),
-      env
+      env,
     );
     expect(resOther.status).toBe(403);
   });
@@ -148,23 +162,27 @@ describe("Sessions Routes", () => {
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ name: "To Delete", region: "lhr" }),
       }),
-      env
+      env,
     );
     expect(createRes.status).toBe(201);
-    const created = await createRes.json() as any;
+    const created = (await createRes.json()) as any;
 
     const res = await app.fetch(
       new Request(`http://localhost/sessions/${created.sessionId}`, {
         method: "DELETE",
         headers: authHeaders,
       }),
-      env
+      env,
     );
     expect(res.status).toBe(200);
 
     // Verify deleted from D1
-    const ownership = await mockD1.prepare("SELECT 1 FROM user_sessions WHERE user_id = ? AND session_id = ?")
-      .bind("user-123", created.sessionId).first();
+    const ownership = await mockD1
+      .prepare(
+        "SELECT 1 FROM user_sessions WHERE user_id = ? AND session_id = ?",
+      )
+      .bind("user-123", created.sessionId)
+      .first();
     expect(ownership).toBeNull();
 
     // Verify deleted from engine

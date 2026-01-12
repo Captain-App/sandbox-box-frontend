@@ -29,6 +29,7 @@ shipbox run "Implement a new feature X and add tests" --repo https://github.com/
 ```
 
 Options:
+
 - `-r, --repo <url>`: Git repository URL to clone
 - `-b, --branch <name>`: Branch to checkout
 - `-s, --session <id>`: Continue an existing session

@@ -8,7 +8,11 @@ import { Schema } from "effect";
  * - system:infra: Infrastructure failures (e.g. R2 timeout, Sandbox crash)
  * - system:bug : Code bugs or unexpected states
  */
-export type ErrorCategory = "user:auth" | "user:input" | "system:infra" | "system:bug";
+export type ErrorCategory =
+  | "user:auth"
+  | "user:input"
+  | "system:infra"
+  | "system:bug";
 
 /**
  * Interface for errors that carry a category.
@@ -45,7 +49,10 @@ export class UserError extends Schema.TaggedError<UserError>()("UserError", {
 /**
  * Base class for system-caused errors.
  */
-export class SystemError extends Schema.TaggedError<SystemError>()("SystemError", {
-  message: Schema.String,
-  category: Schema.Literal("system:infra", "system:bug"),
-}) {}
+export class SystemError extends Schema.TaggedError<SystemError>()(
+  "SystemError",
+  {
+    message: Schema.String,
+    category: Schema.Literal("system:infra", "system:bug"),
+  },
+) {}

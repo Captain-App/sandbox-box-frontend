@@ -8,8 +8,8 @@
     {
       "binding": "DB",
       "database_name": "shipbox-test-db",
-      "database_id": "local"
-    }
+      "database_id": "local",
+    },
   ],
   "vars": {
     "SUPABASE_URL": "https://test.supabase.co",
@@ -20,6 +20,6 @@
     "GITHUB_APP_ID": "12345",
     "GITHUB_APP_PRIVATE_KEY": "test-private-key",
     "GITHUB_APP_NAME": "shipbox-test",
-    "GITHUB_WEBHOOK_SECRET": "whsec_github_test"
-  }
+    "GITHUB_WEBHOOK_SECRET": "whsec_github_test",
+  },
 }

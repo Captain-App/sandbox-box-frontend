@@ -15,17 +15,20 @@ type Variables = {
   user: { id: string };
 };
 
-export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+export const sessionsRoutes = new Hono<{
+  Bindings: Bindings;
+  Variables: Variables;
+}>()
   .get("/", async (c) => {
     const user = c.get("user");
     const service = Effect.runSync(
       Effect.map(SessionService, (s) => s).pipe(
-        Effect.provide(makeSessionServiceLayer(c.env.DB))
-      )
+        Effect.provide(makeSessionServiceLayer(c.env.DB)),
+      ),
     );
 
     const sessionIds = await Effect.runPromise(service.listOwned(user.id));
-    
+
     // Fetch metadata for each owned session
     // In a production app, we might want a bulk fetch endpoint in sandbox-mcp
     const traceparent = c.req.header("traceparent");
@@ -36,25 +39,30 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
 
     const sessions = await Promise.all(
       sessionIds.map(async (id) => {
-        const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${id}`, {
-          headers: forwardHeaders,
-        });
+        const res = await c.env.SANDBOX_MCP.fetch(
+          `http://sandbox/internal/sessions/${id}`,
+          {
+            headers: forwardHeaders,
+          },
+        );
         if (res.ok) {
-          const s = await res.json() as any;
+          const s = (await res.json()) as any;
           return { ...s, id: s.sessionId };
         }
         return null;
-      })
+      }),
     );
 
-    return c.json(sessions.filter(s => s !== null));
+    return c.json(sessions.filter((s) => s !== null));
   })
   .post("/", async (c) => {
     const user = c.get("user");
     const body = await c.req.json();
-    
+
     // Validate input
-    const decodeResult = Effect.runSyncExit(Schema.decodeUnknown(CreateSessionInput)(body));
+    const decodeResult = Effect.runSyncExit(
+      Schema.decodeUnknown(CreateSessionInput)(body),
+    );
     if (Exit.isFailure(decodeResult)) {
       return c.json({ error: "Invalid input" }, 400);
     }
@@ -75,48 +83,56 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
         }
       }).pipe(
         Effect.provide(billingServiceLayer),
-        Effect.provide(emailServiceLayer)
-      )
+        Effect.provide(emailServiceLayer),
+      ),
     );
 
     // Check quota and balance first
     const quotaResult = await Effect.runPromiseExit(
       Effect.all([
         Effect.flatMap(QuotaService, (s) => s.checkSandboxQuota(user.id)),
-        Effect.flatMap(QuotaService, (s) => s.checkBalance(user.id))
-      ]).pipe(Effect.provide(quotaServiceLayer))
+        Effect.flatMap(QuotaService, (s) => s.checkBalance(user.id)),
+      ]).pipe(Effect.provide(quotaServiceLayer)),
     );
-    
+
     if (Exit.isFailure(quotaResult)) {
       const error = Cause.failureOrCause(quotaResult.cause);
-      const message = error._tag === "Left" ? error.left.message : "Quota or balance check failed";
+      const message =
+        error._tag === "Left"
+          ? error.left.message
+          : "Quota or balance check failed";
       return c.json({ error: message }, 403);
     }
 
     const service = Effect.runSync(
       Effect.map(SessionService, (s) => s).pipe(
-        Effect.provide(makeSessionServiceLayer(c.env.DB))
-      )
+        Effect.provide(makeSessionServiceLayer(c.env.DB)),
+      ),
     );
 
     const traceparent = c.req.header("traceparent");
     const baggage = c.req.header("baggage");
-    const forwardHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    const forwardHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
     if (traceparent) forwardHeaders["traceparent"] = traceparent;
     if (baggage) forwardHeaders["baggage"] = baggage;
 
     // 1. Create session in sandbox-mcp
-    const res = await c.env.SANDBOX_MCP.fetch("http://sandbox/internal/sessions", {
-      method: "POST",
-      body: JSON.stringify({ ...input, userId: user.id }),
-      headers: forwardHeaders
-    });
+    const res = await c.env.SANDBOX_MCP.fetch(
+      "http://sandbox/internal/sessions",
+      {
+        method: "POST",
+        body: JSON.stringify({ ...input, userId: user.id }),
+        headers: forwardHeaders,
+      },
+    );
 
     if (!res.ok) {
       return c.json({ error: "Failed to create session in engine" }, 500);
     }
 
-    const session = await res.json() as any;
+    const session = (await res.json()) as any;
 
     // 2. Register ownership in D1
     await Effect.runPromise(service.register(user.id, session.sessionId));
@@ -129,12 +145,14 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     const id = c.req.param("id");
     const service = Effect.runSync(
       Effect.map(SessionService, (s) => s).pipe(
-        Effect.provide(makeSessionServiceLayer(c.env.DB))
-      )
+        Effect.provide(makeSessionServiceLayer(c.env.DB)),
+      ),
     );
 
     // Check ownership
-    const isOwned = await Effect.runPromise(service.checkOwnership(user.id, id));
+    const isOwned = await Effect.runPromise(
+      service.checkOwnership(user.id, id),
+    );
     if (!isOwned) return c.json({ error: "Forbidden" }, 403);
 
     const traceparent = c.req.header("traceparent");
@@ -144,12 +162,15 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     if (baggage) forwardHeaders["baggage"] = baggage;
 
     // Proxy to sandbox-mcp
-    const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${id}`, {
-      headers: forwardHeaders
-    });
+    const res = await c.env.SANDBOX_MCP.fetch(
+      `http://sandbox/internal/sessions/${id}`,
+      {
+        headers: forwardHeaders,
+      },
+    );
     if (!res.ok) return c.json({ error: "Session not found in engine" }, 404);
-    
-    const session = await res.json() as any;
+
+    const session = (await res.json()) as any;
     return c.json({ ...session, id: session.sessionId });
   })
   .delete("/:id", async (c) => {
@@ -157,12 +178,14 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     const id = c.req.param("id");
     const service = Effect.runSync(
       Effect.map(SessionService, (s) => s).pipe(
-        Effect.provide(makeSessionServiceLayer(c.env.DB))
-      )
+        Effect.provide(makeSessionServiceLayer(c.env.DB)),
+      ),
     );
 
     // Check ownership
-    const isOwned = await Effect.runPromise(service.checkOwnership(user.id, id));
+    const isOwned = await Effect.runPromise(
+      service.checkOwnership(user.id, id),
+    );
     if (!isOwned) return c.json({ error: "Forbidden" }, 403);
 
     const traceparent = c.req.header("traceparent");
@@ -172,9 +195,9 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     if (baggage) forwardHeaders["baggage"] = baggage;
 
     // Delete in sandbox-mcp
-    await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${id}`, { 
+    await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${id}`, {
       method: "DELETE",
-      headers: forwardHeaders
+      headers: forwardHeaders,
     });
 
     // Unregister in D1
@@ -187,12 +210,14 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     const id = c.req.param("id");
     const service = Effect.runSync(
       Effect.map(SessionService, (s) => s).pipe(
-        Effect.provide(makeSessionServiceLayer(c.env.DB))
-      )
+        Effect.provide(makeSessionServiceLayer(c.env.DB)),
+      ),
     );
 
     // Check ownership
-    const isOwned = await Effect.runPromise(service.checkOwnership(user.id, id));
+    const isOwned = await Effect.runPromise(
+      service.checkOwnership(user.id, id),
+    );
     if (!isOwned) return c.json({ error: "Forbidden" }, 403);
 
     const traceparent = c.req.header("traceparent");
@@ -202,10 +227,13 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     if (baggage) forwardHeaders["baggage"] = baggage;
 
     // Start in sandbox-mcp
-    const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${id}/start`, { 
-      method: "POST",
-      headers: forwardHeaders
-    });
+    const res = await c.env.SANDBOX_MCP.fetch(
+      `http://sandbox/internal/sessions/${id}/start`,
+      {
+        method: "POST",
+        headers: forwardHeaders,
+      },
+    );
     return c.json(await res.json());
   })
   .get("/:id/plan", async (c) => {
@@ -213,12 +241,14 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     const id = c.req.param("id");
     const service = Effect.runSync(
       Effect.map(SessionService, (s) => s).pipe(
-        Effect.provide(makeSessionServiceLayer(c.env.DB))
-      )
+        Effect.provide(makeSessionServiceLayer(c.env.DB)),
+      ),
     );
 
     // Check ownership
-    const isOwned = await Effect.runPromise(service.checkOwnership(user.id, id));
+    const isOwned = await Effect.runPromise(
+      service.checkOwnership(user.id, id),
+    );
     if (!isOwned) return c.json({ error: "Forbidden" }, 403);
 
     const traceparent = c.req.header("traceparent");
@@ -228,16 +258,19 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     if (baggage) forwardHeaders["baggage"] = baggage;
 
     // Proxy to sandbox-mcp internal file endpoint
-    const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${id}/files/PLAN.md`, {
-      headers: forwardHeaders
-    });
-    
+    const res = await c.env.SANDBOX_MCP.fetch(
+      `http://sandbox/internal/sessions/${id}/files/PLAN.md`,
+      {
+        headers: forwardHeaders,
+      },
+    );
+
     if (res.status === 404) {
       return c.json({ content: "" }); // Return empty plan if file doesn't exist yet
     }
-    
+
     if (!res.ok) return c.json({ error: "Failed to read plan" }, 500);
-    
+
     const content = await res.text();
     return c.json({ content });
   })
@@ -247,32 +280,42 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     const body = await c.req.json();
     const service = Effect.runSync(
       Effect.map(SessionService, (s) => s).pipe(
-        Effect.provide(makeSessionServiceLayer(c.env.DB))
-      )
+        Effect.provide(makeSessionServiceLayer(c.env.DB)),
+      ),
     );
 
     // Check ownership
-    const isOwned = await Effect.runPromise(service.checkOwnership(user.id, id));
+    const isOwned = await Effect.runPromise(
+      service.checkOwnership(user.id, id),
+    );
     if (!isOwned) return c.json({ error: "Forbidden" }, 403);
 
     const traceparent = c.req.header("traceparent");
     const baggage = c.req.header("baggage");
-    const forwardHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    const forwardHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
     if (traceparent) forwardHeaders["traceparent"] = traceparent;
     if (baggage) forwardHeaders["baggage"] = baggage;
 
     // Start task in sandbox-mcp
-    const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/sessions/${id}/task`, { 
-      method: "POST",
-      body: JSON.stringify(body),
-      headers: forwardHeaders
-    });
-    
+    const res = await c.env.SANDBOX_MCP.fetch(
+      `http://sandbox/internal/sessions/${id}/task`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: forwardHeaders,
+      },
+    );
+
     if (!res.ok) {
       const errorText = await res.text();
-      return c.json({ error: `Failed to start task: ${errorText}` }, res.status);
+      return c.json(
+        { error: `Failed to start task: ${errorText}` },
+        res.status,
+      );
     }
-    
+
     return c.json(await res.json());
   })
   .get("/:id/runs/:runId", async (c) => {
@@ -281,12 +324,14 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     const runId = c.req.param("runId");
     const service = Effect.runSync(
       Effect.map(SessionService, (s) => s).pipe(
-        Effect.provide(makeSessionServiceLayer(c.env.DB))
-      )
+        Effect.provide(makeSessionServiceLayer(c.env.DB)),
+      ),
     );
 
     // Check ownership
-    const isOwned = await Effect.runPromise(service.checkOwnership(user.id, id));
+    const isOwned = await Effect.runPromise(
+      service.checkOwnership(user.id, id),
+    );
     if (!isOwned) return c.json({ error: "Forbidden" }, 403);
 
     const traceparent = c.req.header("traceparent");
@@ -296,11 +341,14 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     if (baggage) forwardHeaders["baggage"] = baggage;
 
     // Get run status from sandbox-mcp
-    const res = await c.env.SANDBOX_MCP.fetch(`http://sandbox/internal/runs/${runId}`, {
-      headers: forwardHeaders
-    });
-    
+    const res = await c.env.SANDBOX_MCP.fetch(
+      `http://sandbox/internal/runs/${runId}`,
+      {
+        headers: forwardHeaders,
+      },
+    );
+
     if (!res.ok) return c.json({ error: "Run not found" }, 404);
-    
+
     return c.json(await res.json());
   });

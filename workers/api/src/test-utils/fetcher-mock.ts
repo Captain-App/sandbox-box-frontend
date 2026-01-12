@@ -1,4 +1,8 @@
-import { CreateSessionInput, SessionMetadata, SessionId } from "@shipbox/shared";
+import {
+  CreateSessionInput,
+  SessionMetadata,
+  SessionId,
+} from "@shipbox/shared";
 import { Effect, Schema } from "effect";
 
 /**
@@ -15,12 +19,19 @@ export function createMockSandboxMcp() {
     // Mock internal sessions API
     if (path === "/internal/sessions") {
       if (method === "POST") {
-        const body = JSON.parse(init?.body as string) as CreateSessionInput & { userId: string };
-        
+        const body = JSON.parse(init?.body as string) as CreateSessionInput & {
+          userId: string;
+        };
+
         // Validate input against schema to catch frontend/api mismatches in tests
-        const decodeResult = Effect.runSyncExit(Schema.decodeUnknown(CreateSessionInput)(body));
+        const decodeResult = Effect.runSyncExit(
+          Schema.decodeUnknown(CreateSessionInput)(body),
+        );
         if (decodeResult._tag === "Failure") {
-          return new Response(JSON.stringify({ error: "Invalid input schema" }), { status: 400 });
+          return new Response(
+            JSON.stringify({ error: "Invalid input schema" }),
+            { status: 400 },
+          );
         }
         const inputData = decodeResult.value;
 
@@ -36,7 +47,12 @@ export function createMockSandboxMcp() {
           webUiUrl: `https://engine/session/${sessionId}/`,
           userId: body.userId,
           title: inputData.name || "Test Box",
-          repository: inputData.repository ? { url: inputData.repository as unknown as `https://github.com/${string}`, branch: "main" } : undefined,
+          repository: inputData.repository
+            ? {
+                url: inputData.repository as unknown as `https://github.com/${string}`,
+                branch: "main",
+              }
+            : undefined,
           config: { defaultModel: "claude-3-5-sonnet" },
         };
         sessions.set(sessionId, session);

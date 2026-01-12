@@ -19,6 +19,7 @@ By default, agents run in a restricted sandbox. To enable full capabilities:
 ## What changes?
 
 When Autonomous Mode is active:
+
 - The agent has root access within the sandbox.
 - Network access is unrestricted.
 - The agent can manage background processes and services.
