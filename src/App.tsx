@@ -13,9 +13,11 @@ import { cn } from './lib/utils'
 import { Button } from './components/ui/Button'
 import { useAuth } from './contexts/AuthContext'
 import { AuthPage } from './pages/Auth'
+import { LandingPage } from './pages/Landing'
 
 function App() {
   const { user, loading: authLoading } = useAuth()
+  const [showAuth, setShowAuth] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [isAcceptanceOpen, setIsAcceptanceOpen] = useState(false)
@@ -30,8 +32,20 @@ function App() {
     if (user) {
       fetchSandboxes()
       
-      // Handle GitHub callback
       const url = new URL(window.location.href);
+
+      // Handle CLI login callback
+      const cliPort = url.searchParams.get("cli_port");
+      if (cliPort) {
+        api.getAuthToken().then(token => {
+          if (token) {
+            window.location.href = `http://localhost:${cliPort}?token=${token}`;
+          }
+        });
+        return;
+      }
+      
+      // Handle GitHub callback
       const installationId = url.searchParams.get("installation_id");
       if (installationId) {
         api.linkGitHub(installationId).then(() => {
@@ -95,7 +109,10 @@ function App() {
   }
 
   if (!user) {
-    return <AuthPage />
+    if (showAuth) {
+      return <AuthPage />
+    }
+    return <LandingPage onGetStarted={() => setShowAuth(true)} />
   }
 
   // If workspace is open, render that instead

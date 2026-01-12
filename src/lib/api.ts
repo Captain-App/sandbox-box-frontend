@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://backend.shipbox.dev';
 
 export interface Sandbox {
   id: string; // Used by frontend (maps to sessionId)
@@ -38,6 +38,11 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 export const api = {
+  async getAuthToken(): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  },
+
   async getSessions(): Promise<Sandbox[]> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/sessions`, { headers });
@@ -97,6 +102,19 @@ export const api = {
       body: JSON.stringify({ amountCredits })
     });
     if (!res.ok) throw new Error('Failed to create checkout session');
+    return res.json();
+  },
+
+  async createPortalSession(): Promise<{ url: string }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/billing/portal`, {
+      method: 'POST',
+      headers
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Failed to create portal session');
+    }
     return res.json();
   },
 

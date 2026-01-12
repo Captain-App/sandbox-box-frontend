@@ -3,6 +3,8 @@ import { Effect, Schema, Exit, Cause } from "effect";
 import { SessionService, makeSessionServiceLayer } from "../services/session";
 import { CreateSessionInput } from "@shipbox/shared";
 import { QuotaService, makeQuotaServiceLayer } from "../services/quota";
+import { BillingService, makeBillingServiceLayer } from "../services/billing";
+import { EmailService, makeEmailServiceLayer } from "../services/email";
 
 type Bindings = {
   DB: D1Database;
@@ -50,18 +52,31 @@ export const sessionsRoutes = new Hono<{ Bindings: Bindings; Variables: Variable
     }
     const input = decodeResult.value;
 
-    const quotaService = Effect.runSync(
-      Effect.map(QuotaService, (s) => s).pipe(
-        Effect.provide(makeQuotaServiceLayer(c.env.DB))
+    const quotaServiceLayer = makeQuotaServiceLayer(c.env.DB);
+    const billingServiceLayer = makeBillingServiceLayer(c.env.DB);
+    const emailServiceLayer = makeEmailServiceLayer();
+
+    // Grant starter credits if it's the first time
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const billing = yield* BillingService;
+        const emailService = yield* EmailService;
+        const granted = yield* billing.grantStarterCredits(user.id);
+        if (granted) {
+          yield* emailService.sendWelcomeEmail(user.email);
+        }
+      }).pipe(
+        Effect.provide(billingServiceLayer),
+        Effect.provide(emailServiceLayer)
       )
     );
 
     // Check quota and balance first
     const quotaResult = await Effect.runPromiseExit(
       Effect.all([
-        quotaService.checkSandboxQuota(user.id),
-        quotaService.checkBalance(user.id)
-      ])
+        Effect.serviceWithEffect(QuotaService, (s) => s.checkSandboxQuota(user.id)),
+        Effect.serviceWithEffect(QuotaService, (s) => s.checkBalance(user.id))
+      ]).pipe(Effect.provide(quotaServiceLayer))
     );
     
     if (Exit.isFailure(quotaResult)) {

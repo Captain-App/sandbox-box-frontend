@@ -3,6 +3,7 @@ import { runCommand } from './commands/run.js';
 import { listCommand } from './commands/list.js';
 import { getCommand } from './commands/get.js';
 import { configCommand } from './commands/config.js';
+import { loginCommand } from './commands/login.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -17,6 +18,7 @@ program
   .description('CLI for shipbox.dev - Delegate coding tasks to AI sandboxes')
   .version(packageJson.version);
 
+program.addCommand(loginCommand);
 program.addCommand(runCommand);
 program.addCommand(listCommand);
 program.addCommand(getCommand);

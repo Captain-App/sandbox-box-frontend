@@ -45,6 +45,15 @@ export function BillingDashboard() {
     }
   };
 
+  const handleManageBilling = async () => {
+    try {
+      const { url } = await api.createPortalSession();
+      window.location.href = url;
+    } catch (err: any) {
+      alert(err.message || "Failed to open billing portal");
+    }
+  };
+
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
     const now = new Date();
@@ -63,10 +72,15 @@ export function BillingDashboard() {
           <h2 className="text-3xl font-black uppercase tracking-tighter">Billing</h2>
           <p className="text-muted-foreground">Credits-first metering. No surprises, no runaway costs.</p>
         </div>
-        <Button variant="primary" size="sm" onClick={handleTopUp} className="gap-2">
-          <ArrowUpRight className="w-4 h-4" />
-          Top Up £10.00
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm" onClick={handleManageBilling} className="gap-2">
+            Manage Payments
+          </Button>
+          <Button variant="primary" size="sm" onClick={handleTopUp} className="gap-2">
+            <ArrowUpRight className="w-4 h-4" />
+            Top Up £10.00
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

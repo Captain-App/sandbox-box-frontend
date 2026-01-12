@@ -32,10 +32,11 @@ export type Bindings = {
   APP_URL?: string;
   HONEYCOMB_API_KEY?: string;
   HONEYCOMB_DATASET?: string;
+  RATE_LIMITER: { limit: (options: { key: string }) => Promise<{ success: boolean }> };
 };
 
 export type Variables = {
-  user: { id: string };
+  user: { id: string; email: string };
 };
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -78,12 +79,33 @@ const authMiddleware = async (c: any, next: any) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const user = await res.json() as { id: string };
-  c.set("user", { id: user.id });
+  const user = await res.json() as { id: string; email: string };
+  c.set("user", { id: user.id, email: user.email });
   await next();
 };
 
 app.use("*", authMiddleware);
+
+// Rate Limiting Middleware
+app.use("*", async (c, next) => {
+  // Skip for internal and health
+  if (c.req.path.startsWith("/internal/") || c.req.path === "/health") {
+    await next();
+    return;
+  }
+
+  const user = c.get("user");
+  const key = user ? user.id : c.req.header("cf-connecting-ip") || "anonymous";
+  
+  if (c.env.RATE_LIMITER) {
+    const { success } = await c.env.RATE_LIMITER.limit({ key });
+    if (!success) {
+      return c.json({ error: "Rate limit exceeded" }, 429);
+    }
+  }
+  
+  await next();
+});
 
 // Internal API for usage reporting (called by engine)
 app.post("/internal/report-usage", async (c) => {

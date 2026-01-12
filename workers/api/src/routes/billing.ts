@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { Effect, Exit, Cause } from "effect";
 import { BillingService, makeBillingServiceLayer } from "../services/billing";
 import { StripeService, makeStripeServiceLayer } from "../services/stripe";
+import { EmailService, makeEmailServiceLayer } from "../services/email";
 import { Bindings, Variables } from "../index";
 import { LoggerLayer, withRequestContext } from "@shipbox/shared";
 
@@ -58,16 +59,57 @@ export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
       c.env.STRIPE_WEBHOOK_SECRET,
       c.env.APP_URL || "https://shipbox.dev"
     );
+    const billingLayer = makeBillingServiceLayer(c.env.DB);
 
     const result = await Effect.runPromiseExit(
       Effect.gen(function* () {
         const stripe = yield* StripeService;
-        return yield* stripe.createCheckoutSession(user.id, amountCredits);
-      }).pipe(Effect.provide(stripeLayer))
+        const billing = yield* BillingService;
+        const customerId = yield* billing.getStripeCustomerId(user.id);
+        return yield* stripe.createCheckoutSession(user.id, amountCredits, customerId);
+      }).pipe(
+        Effect.provide(stripeLayer),
+        Effect.provide(billingLayer)
+      )
     );
 
     if (Exit.isFailure(result)) {
       return c.json({ error: "Failed to create checkout session" }, 500);
+    }
+
+    return c.json(result.value);
+  })
+  .post("/portal", async (c) => {
+    const user = c.get("user");
+
+    const stripeLayer = makeStripeServiceLayer(
+      c.env.STRIPE_API_KEY,
+      c.env.STRIPE_WEBHOOK_SECRET,
+      c.env.APP_URL || "https://shipbox.dev"
+    );
+    const billingLayer = makeBillingServiceLayer(c.env.DB);
+
+    const result = await Effect.runPromiseExit(
+      Effect.gen(function* () {
+        const stripe = yield* StripeService;
+        const billing = yield* BillingService;
+        const customerId = yield* billing.getStripeCustomerId(user.id);
+        
+        if (!customerId) {
+          return yield* Effect.fail(new Error("No Stripe customer found. Please make a payment first."));
+        }
+
+        return yield* stripe.createPortalSession(customerId);
+      }).pipe(
+        Effect.provide(stripeLayer),
+        Effect.provide(billingLayer)
+      )
+    );
+
+    if (Exit.isFailure(result)) {
+      const error = Cause.failureOrCause(result.cause);
+      const message = error._tag === "Left" ? error.left.message : "Portal session failed";
+      return c.json({ error: message }, 400);
     }
 
     return c.json(result.value);
@@ -84,25 +126,34 @@ export const billingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
       c.env.APP_URL || "https://shipbox.dev"
     );
     const billingLayer = makeBillingServiceLayer(c.env.DB);
+    const emailLayer = makeEmailServiceLayer();
 
     const requestId = c.get("requestId");
     const result = await Effect.runPromiseExit(
       Effect.gen(function* () {
         const stripe = yield* StripeService;
         const billing = yield* BillingService;
+        const emailService = yield* EmailService;
 
-        const { userId, amountCredits } = yield* stripe.handleWebhook(payload, signature);
+        const { userId, amountCredits, customerId, email } = yield* stripe.handleWebhook(payload, signature);
         
         // Only process if we have valid data (skip ignored events)
         if (userId && amountCredits > 0) {
           yield* billing.topUp(userId, amountCredits, "Stripe top-up");
-          yield* Effect.log(`Credited ${amountCredits} to user ${userId}`);
+          if (customerId) {
+            yield* billing.setStripeCustomerId(userId, customerId);
+          }
+          if (email) {
+            yield* emailService.sendReceipt(email, amountCredits);
+          }
+          yield* Effect.log(`Credited ${amountCredits} to user ${userId} (Customer: ${customerId})`);
         }
         
         return { success: true };
       }).pipe(
         Effect.provide(stripeLayer),
         Effect.provide(billingLayer),
+        Effect.provide(emailLayer),
         withRequestContext(requestId),
         Effect.provide(LoggerLayer)
       )
