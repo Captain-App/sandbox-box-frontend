@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { Effect, Schema, Exit, Cause } from "effect";
 import { SessionService, makeSessionServiceLayer } from "../services/session";
-import { CreateSessionInput } from "../models/session";
+import { CreateSessionInput } from "@shipbox/shared";
 import { QuotaService, makeQuotaServiceLayer } from "../services/quota";
 
 type Bindings = {

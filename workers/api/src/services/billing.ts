@@ -1,6 +1,5 @@
 import { Context, Effect, Layer } from "effect";
-import { UserBalance, Transaction, TransactionType } from "../models/billing";
-import { SessionStorageError } from "../models/errors";
+import { UserBalance, Transaction, TransactionType, SessionStorageError } from "@shipbox/shared";
 
 export interface BillingServiceInterface {
   readonly getBalance: (userId: string) => Effect.Effect<UserBalance, SessionStorageError>;
@@ -29,6 +28,14 @@ export interface BillingServiceInterface {
     amountCredits: number,
     description: string
   ) => Effect.Effect<void, SessionStorageError>;
+  readonly getTransactions: (
+    userId: string,
+    limit?: number
+  ) => Effect.Effect<Transaction[], SessionStorageError>;
+  readonly getConsumption: (
+    userId: string,
+    periodStart: number
+  ) => Effect.Effect<number, SessionStorageError>;
 }
 
 export class BillingService extends Context.Tag("BillingService")<
@@ -162,6 +169,42 @@ function makeD1BillingService(db: D1Database): BillingServiceInterface {
               "INSERT INTO user_balances (user_id, balance_credits, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET balance_credits = balance_credits + ?, updated_at = ?"
             ).bind(userId, amountCredits, now, amountCredits, now)
           ]);
+        },
+        catch: (error) => new SessionStorageError({ 
+          cause: error instanceof Error ? error.message : String(error) 
+        }),
+      }),
+
+    getTransactions: (userId, limit = 50) =>
+      Effect.tryPromise({
+        try: async () => {
+          const { results } = await db.prepare(
+            "SELECT id, user_id, amount_credits, type, description, created_at, metadata FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?"
+          ).bind(userId, limit).all();
+
+          return results.map((r: any) => ({
+            id: r.id,
+            userId: r.user_id,
+            amountCredits: r.amount_credits,
+            type: r.type,
+            description: r.description || undefined,
+            createdAt: r.created_at,
+            metadata: r.metadata || undefined,
+          }));
+        },
+        catch: (error) => new SessionStorageError({ 
+          cause: error instanceof Error ? error.message : String(error) 
+        }),
+      }),
+
+    getConsumption: (userId, periodStart) =>
+      Effect.tryPromise({
+        try: async () => {
+          const result = await db.prepare(
+            "SELECT SUM(ABS(amount_credits)) as total FROM transactions WHERE user_id = ? AND amount_credits < 0 AND created_at >= ?"
+          ).bind(userId, periodStart).first();
+
+          return (result?.total as number) || 0;
         },
         catch: (error) => new SessionStorageError({ 
           cause: error instanceof Error ? error.message : String(error) 

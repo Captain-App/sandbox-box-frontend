@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from "effect";
-import { SessionStorageError } from "../models/errors";
+import { SessionStorageError } from "@shipbox/shared";
 
 export interface QuotaServiceInterface {
   readonly checkSandboxQuota: (userId: string) => Effect.Effect<void, Error | SessionStorageError>;

@@ -1,7 +1,8 @@
 import { Hono } from "hono";
-import { Effect, Exit } from "effect";
+import { Effect, Exit, Option } from "effect";
 import { GitHubService, makeGitHubServiceLayer } from "../services/github";
 import { Bindings, Variables } from "../index";
+import { LoggerLayer, withRequestContext } from "@shipbox/shared";
 
 async function verifySignature(payload: string, signature: string | null, secret: string): Promise<boolean> {
   if (!signature) return false;
@@ -39,6 +40,7 @@ export const githubRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
     const data = JSON.parse(payload) as any;
     const event = c.req.header("x-github-event");
 
+    const requestId = c.get("requestId");
     if (event === "installation" && data.action === "created") {
       const installationId = data.installation.id;
       const accountLogin = data.installation.account.login;
@@ -51,7 +53,12 @@ export const githubRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
       const userId = data.requester?.id || data.sender?.id; // Fallback or use DB lookup
       
       // For now, we rely on the frontend calling /link or we look for a pending link.
-      console.log(`GitHub installation created: ${installationId} for ${accountLogin}`);
+      await Effect.runPromise(
+        Effect.log(`GitHub installation created: ${installationId} for ${accountLogin}`).pipe(
+          withRequestContext(requestId, userId),
+          Effect.provide(LoggerLayer)
+        )
+      );
     }
 
     return c.json({ success: true });
@@ -62,6 +69,7 @@ export const githubRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
 
     const layer = makeGitHubServiceLayer(c.env.DB, c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
 
+    const requestId = c.get("requestId");
     const result = await Effect.runPromiseExit(
       Effect.gen(function* () {
         const service = yield* GitHubService;
@@ -75,11 +83,20 @@ export const githubRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
           accountLogin: metadata.accountLogin,
           accountType: metadata.accountType,
         });
-      }).pipe(Effect.provide(layer))
+      }).pipe(
+        Effect.provide(layer),
+        withRequestContext(requestId, user.id),
+        Effect.provide(LoggerLayer)
+      )
     );
 
     if (Exit.isFailure(result)) {
-      console.error("Link GitHub error:", Exit.cause(result));
+      await Effect.runPromise(
+        Effect.logError("Link GitHub error", result.cause).pipe(
+          withRequestContext(requestId, user.id),
+          Effect.provide(LoggerLayer)
+        )
+      );
       return c.json({ error: "Failed to link GitHub installation" }, 500);
     }
 
@@ -100,12 +117,13 @@ export const githubRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
       return c.json({ error: "Failed to fetch GitHub status" }, 500);
     }
 
-    return c.json(result.value);
+    return c.json(Option.getOrNull(result.value));
   })
   .get("/repos", async (c) => {
     const user = c.get("user");
     const layer = makeGitHubServiceLayer(c.env.DB, c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
 
+    const requestId = c.get("requestId");
     const result = await Effect.runPromiseExit(
       Effect.gen(function* () {
         const service = yield* GitHubService;
@@ -136,11 +154,20 @@ export const githubRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
           html_url: r.html_url,
           clone_url: r.clone_url,
         }));
-      }).pipe(Effect.provide(layer))
+      }).pipe(
+        Effect.provide(layer),
+        withRequestContext(requestId, user.id),
+        Effect.provide(LoggerLayer)
+      )
     );
 
     if (Exit.isFailure(result)) {
-      console.error("Fetch repos error:", Exit.cause(result));
+      await Effect.runPromise(
+        Effect.logError("Fetch repos error", result.cause).pipe(
+          withRequestContext(requestId, user.id),
+          Effect.provide(LoggerLayer)
+        )
+      );
       return c.json({ error: "Failed to fetch repositories" }, 500);
     }
 

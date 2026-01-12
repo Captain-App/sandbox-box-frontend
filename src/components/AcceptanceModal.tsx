@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useCallback } from "react"
 import { ShieldAlert, X } from "lucide-react"
 import { Button } from "./ui/Button"
 import { cn } from "../lib/utils"
@@ -10,9 +10,15 @@ interface AcceptanceModalProps {
 }
 
 export function AcceptanceModal({ isOpen, onClose, onAccept }: AcceptanceModalProps) {
-  const [inputValue, setInputValue] = useState("")
+  // Use ref for uncontrolled input - more AI/automation friendly
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [isCorrect, setIsCorrect] = useState(false)
   const targetPhrase = "I ACCEPT RESPONSIBILITY"
-  const isCorrect = inputValue.toUpperCase() === targetPhrase
+  
+  const handleInputChange = useCallback(() => {
+    const value = inputRef.current?.value || '';
+    setIsCorrect(value.toUpperCase() === targetPhrase);
+  }, [targetPhrase]);
 
   if (!isOpen) return null
 
@@ -61,15 +67,19 @@ export function AcceptanceModal({ isOpen, onClose, onAccept }: AcceptanceModalPr
 
           <div className="w-full space-y-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              <label htmlFor="acceptance-confirmation" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                 Type "{targetPhrase}" to proceed
               </label>
               <input
+                ref={inputRef}
+                id="acceptance-confirmation"
+                name="acceptance-confirmation"
                 type="text"
                 autoFocus
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={handleInputChange}
                 placeholder="Type here..."
+                aria-label="Type I ACCEPT RESPONSIBILITY to confirm"
+                aria-required="true"
                 className={cn(
                   "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center font-black tracking-widest uppercase transition-all focus:outline-none focus:ring-2",
                   isCorrect ? "focus:ring-green-500 border-green-500/50 text-green-500" : "focus:ring-primary border-white/10"

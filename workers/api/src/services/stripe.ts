@@ -60,7 +60,8 @@ function makeStripeService(
     handleWebhook: (payload, signature) =>
       Effect.tryPromise({
         try: async () => {
-          const event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+          // Use async version for Cloudflare Workers (SubtleCrypto)
+          const event = await stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
 
           if (event.type === "checkout.session.completed") {
             const session = event.data.object as Stripe.Checkout.Session;
@@ -68,7 +69,8 @@ function makeStripeService(
             const amountCredits = session.metadata?.amountCredits;
 
             if (!userId || !amountCredits) {
-              throw new Error("Missing metadata in Stripe session");
+              // This happens with test triggers that don't have our metadata
+              return { userId: "", amountCredits: 0 };
             }
 
             return {
@@ -77,7 +79,8 @@ function makeStripeService(
             };
           }
 
-          throw new Error(`Unhandled event type: ${event.type}`);
+          // Acknowledge other events without processing - don't throw
+          return { userId: "", amountCredits: 0 };
         },
         catch: (error) => new Error(`Webhook error: ${error}`),
       }),

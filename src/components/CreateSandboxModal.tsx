@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Box, X, Github, Zap, Loader2, Search, Check } from "lucide-react"
 import { Button } from "./ui/Button"
 import { cn } from "../lib/utils"
@@ -18,9 +18,14 @@ const regions = [
 ]
 
 export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxModalProps) {
-  const [name, setName] = useState("")
+  // Use refs for uncontrolled inputs - more AI/automation friendly
+  const nameRef = useRef<HTMLInputElement>(null)
+  const repoRef = useRef<HTMLInputElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  
+  const [name, setName] = useState("") // Keep name state for UI feedback (disabling button)
   const [selectedRegion, setSelectedRegion] = useState("lhr")
-  const [repo, setRepo] = useState("")
+  const [selectedRepo, setSelectedRepo] = useState("")
   const [githubRepos, setGithubRepos] = useState<any[]>([])
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
@@ -64,10 +69,15 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Box Name</label>
+              <label htmlFor="sandbox-name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Box Name</label>
               <input
+                ref={nameRef}
+                id="sandbox-name"
+                name="sandbox-name"
                 type="text"
                 placeholder="e.g. My New Agent"
+                aria-label="Sandbox name"
+                aria-required="true"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary transition-all"
@@ -106,17 +116,20 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
                   >
                     <div className="flex items-center gap-3">
                       <Github className="w-4 h-4 text-muted-foreground" />
-                      <span>{repo || "Select from GitHub..."}</span>
+                      <span>{selectedRepo || "Select from GitHub..."}</span>
                     </div>
                     {loadingRepos ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   </button>
 
                   {showRepoPicker && (
-                    <div className="absolute z-10 left-0 right-0 mt-2 p-2 rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-h-64 overflow-y-auto">
+                    <div className="absolute z-10 left-0 right-0 mt-2 p-2 rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-h-64 overflow-y-auto" role="listbox" aria-label="Repository list">
                       <input
+                        ref={searchRef}
+                        id="repo-search"
+                        name="repo-search"
                         type="text"
                         placeholder="Search repositories..."
-                        value={searchQuery}
+                        aria-label="Search repositories"
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs mb-2 focus:outline-none focus:ring-1 focus:ring-primary"
                         onClick={(e) => e.stopPropagation()}
@@ -126,8 +139,11 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
                           <button
                             key={r.id}
                             onClick={() => {
-                              setRepo(r.html_url);
+                              setSelectedRepo(r.html_url);
                               if (!name) setName(r.name);
+                              if (nameRef.current && !nameRef.current.value) {
+                                nameRef.current.value = r.name;
+                              }
                               setShowRepoPicker(false);
                             }}
                             className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5 text-left text-xs transition-all"
@@ -136,7 +152,7 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
                               <span className="font-bold text-white">{r.name}</span>
                               <span className="text-[10px] text-muted-foreground">{r.full_name}</span>
                             </div>
-                            {repo === r.html_url && <Check className="w-3 h-3 text-primary" />}
+                                    {selectedRepo === r.html_url && <Check className="w-3 h-3 text-primary" />}
                           </button>
                         ))}
                         {filteredRepos.length === 0 && (
@@ -148,12 +164,14 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
                 </div>
               ) : (
                 <div className="relative">
-                  <Github className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Github className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
                   <input
+                    ref={repoRef}
+                    id="repo-url"
+                    name="repo-url"
                     type="text"
                     placeholder="https://github.com/..."
-                    value={repo}
-                    onChange={(e) => setRepo(e.target.value)}
+                    aria-label="Repository URL"
                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                   />
                 </div>
@@ -165,7 +183,12 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
             <Button 
               className="w-full py-6 text-lg uppercase tracking-widest gap-3"
               disabled={!name}
-              onClick={() => onCreate(name, selectedRegion, repo)}
+              onClick={() => {
+                const finalName = name || nameRef.current?.value || '';
+                const finalRepo = selectedRepo || repoRef.current?.value || '';
+                if (finalName) onCreate(finalName, selectedRegion, finalRepo);
+              }}
+              aria-label="Create new sandbox"
             >
               <Zap className="w-5 h-5" />
               Initialise Sandbox

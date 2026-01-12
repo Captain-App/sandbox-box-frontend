@@ -1,14 +1,17 @@
 import { Key, Github, Loader2, Save, Trash2, ExternalLink, ShieldCheck } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "./ui/Button"
 import { api } from "../lib/api"
+import { SecretsVault } from "./SecretsVault"
 
 export function Settings() {
   const [settings, setSettings] = useState<{ anthropicHint: string | null } | null>(null);
   const [githubStatus, setGithubStatus] = useState<{ installationId: number; accountLogin: string; accountType: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState(false);
-  const [anthropicKey, setAnthropicKey] = useState("");
+  
+  // Use ref for uncontrolled input - more AI/automation friendly
+  const anthropicKeyRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     Promise.all([
@@ -22,13 +25,14 @@ export function Settings() {
   }, []);
 
   const handleSaveAnthropicKey = async () => {
+    const anthropicKey = anthropicKeyRef.current?.value || '';
     if (!anthropicKey) return;
     setSavingKey(true);
     try {
       await api.setAnthropicKey(anthropicKey);
       const s = await api.getSettings();
       setSettings(s);
-      setAnthropicKey("");
+      if (anthropicKeyRef.current) anthropicKeyRef.current.value = '';
     } catch (err) {
       alert("Failed to save API key");
     } finally {
@@ -64,7 +68,7 @@ export function Settings() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64" role="status">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
@@ -106,17 +110,20 @@ export function Settings() {
 
           <div className="flex gap-2">
             <input
+              ref={anthropicKeyRef}
+              id="anthropic-key"
+              name="anthropic-key"
               type="password"
               placeholder="Paste sk-ant-... key"
-              value={anthropicKey}
-              onChange={(e) => setAnthropicKey(e.target.value)}
+              aria-label="Anthropic API key"
               className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             />
             <Button 
               variant="primary" 
               size="sm" 
               onClick={handleSaveAnthropicKey}
-              disabled={!anthropicKey || savingKey}
+              disabled={savingKey}
+              aria-label="Save Anthropic API key"
               className="gap-2"
             >
               {savingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -173,6 +180,11 @@ export function Settings() {
             </Button>
           </div>
         )}
+      </div>
+
+      {/* Secrets Vault */}
+      <div className="p-8 rounded-[2rem] border border-white/5 bg-white/5">
+        <SecretsVault />
       </div>
     </div>
   )

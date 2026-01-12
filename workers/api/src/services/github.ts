@@ -1,13 +1,6 @@
 import { Context, Effect, Layer, Option } from "effect";
 import * as jose from "jose";
-import { GithubError } from "../models/errors";
-
-export interface GitHubInstallation {
-  userId: string;
-  installationId: number;
-  accountLogin: string;
-  accountType: string;
-}
+import { GithubError, type GitHubInstallation } from "@shipbox/shared";
 
 export interface GitHubServiceInterface {
   readonly getInstallation: (userId: string) => Effect.Effect<Option.Option<GitHubInstallation>, GithubError>;

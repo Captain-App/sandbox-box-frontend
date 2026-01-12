@@ -100,6 +100,22 @@ export const api = {
     return res.json();
   },
 
+  async getTransactions(limit?: number): Promise<any[]> {
+    const headers = await getAuthHeaders();
+    const url = new URL(`${API_BASE_URL}/billing/transactions`);
+    if (limit) url.searchParams.set('limit', limit.toString());
+    const res = await fetch(url.toString(), { headers });
+    if (!res.ok) throw new Error('Failed to fetch transactions');
+    return res.json();
+  },
+
+  async getConsumption(): Promise<{ consumptionCredits: number }> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/billing/consumption`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch consumption');
+    return res.json();
+  },
+
   // GitHub integration
   async getGitHubStatus(): Promise<{ installationId: number; accountLogin: string; accountType: string } | null> {
     const headers = await getAuthHeaders();
@@ -159,5 +175,33 @@ export const api = {
       headers
     });
     if (!res.ok) throw new Error('Failed to delete API key');
+  },
+
+  // Box Secrets
+  async getBoxSecrets(): Promise<any[]> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/box-secrets`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch box secrets');
+    return res.json();
+  },
+
+  async createBoxSecret(name: string, value: string): Promise<any> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/box-secrets`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ name, value })
+    });
+    if (!res.ok) throw new Error('Failed to create box secret');
+    return res.json();
+  },
+
+  async deleteBoxSecret(id: string): Promise<void> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE_URL}/box-secrets/${id}`, {
+      method: 'DELETE',
+      headers
+    });
+    if (!res.ok) throw new Error('Failed to delete box secret');
   }
 };

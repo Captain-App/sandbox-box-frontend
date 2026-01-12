@@ -37,6 +37,18 @@ CREATE TABLE IF NOT EXISTS user_api_keys (
   last_used INTEGER
 );
 
+-- Shipbox API Keys for CLI/API access
+CREATE TABLE IF NOT EXISTS user_shipbox_api_keys (
+  key_hash TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  key_hint TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  last_used INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_shipbox_api_keys_user ON user_shipbox_api_keys(user_id);
+
 -- GitHub App Installations
 CREATE TABLE IF NOT EXISTS github_installations (
   user_id TEXT PRIMARY KEY NOT NULL,
@@ -46,3 +58,17 @@ CREATE TABLE IF NOT EXISTS github_installations (
   created_at INTEGER NOT NULL,
   permissions TEXT                -- JSON of granted permissions
 );
+
+-- Box Secrets: Encrypted secrets for sandboxes
+CREATE TABLE IF NOT EXISTS user_box_secrets (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,           -- e.g. "GITHUB_TOKEN"
+  encrypted_value TEXT NOT NULL, -- AES-GCM encrypted
+  hint TEXT NOT NULL,           -- Last 4 chars for display
+  created_at INTEGER NOT NULL,
+  last_used INTEGER
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_box_secrets_user_name ON user_box_secrets(user_id, name);
+CREATE INDEX IF NOT EXISTS idx_box_secrets_user ON user_box_secrets(user_id);

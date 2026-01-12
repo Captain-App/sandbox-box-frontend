@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: './src/test/setup.ts',
+    setupFiles: './src/vitest.setup.ts',
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -20,6 +20,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@shipbox/shared': path.resolve(__dirname, './packages/shared/src/index.ts'),
     },
   },
 })

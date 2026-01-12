@@ -28,6 +28,9 @@ export function SandboxSelector({ activeSandbox, sandboxes, onSelect, onCreateNe
     <div className="relative" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label={`Select sandbox. Current: ${activeSandbox.title || activeSandbox.id}`}
         className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
       >
         <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
@@ -41,7 +44,7 @@ export function SandboxSelector({ activeSandbox, sandboxes, onSelect, onCreateNe
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-72 p-2 rounded-2xl bg-slate-950 border border-white/10 shadow-2xl z-[60] animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-full left-0 mt-2 w-72 p-2 rounded-2xl bg-slate-950 border border-white/10 shadow-2xl z-[60] animate-in fade-in slide-in-from-top-2" role="listbox" aria-label="Available sandboxes">
           <div className="space-y-1">
             {sandboxes.map((sb) => (
               <button

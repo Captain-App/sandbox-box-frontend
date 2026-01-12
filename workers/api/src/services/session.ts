@@ -1,6 +1,5 @@
 import { Context, Effect, Layer } from "effect";
-import { SessionId } from "../models/session";
-import { SessionStorageError } from "../models/errors";
+import { SessionId, SessionStorageError } from "@shipbox/shared";
 
 export interface SessionServiceInterface {
   readonly register: (userId: string, sessionId: string) => Effect.Effect<void, SessionStorageError>;

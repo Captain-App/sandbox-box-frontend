@@ -1,0 +1,25 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "shipbox-api-test",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-09",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "shipbox-test-db",
+      "database_id": "local"
+    }
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://test.supabase.co",
+    "SUPABASE_ANON_KEY": "test-anon-key",
+    "PROXY_JWT_SECRET": "test-jwt-secret-32-chars-long!!!",
+    "STRIPE_API_KEY": "sk_test_xxx",
+    "STRIPE_WEBHOOK_SECRET": "whsec_test",
+    "GITHUB_APP_ID": "12345",
+    "GITHUB_APP_PRIVATE_KEY": "test-private-key",
+    "GITHUB_APP_NAME": "shipbox-test",
+    "GITHUB_WEBHOOK_SECRET": "whsec_github_test"
+  }
+}

@@ -50,12 +50,13 @@ To provide a secure, scalable, and multi-tenant interface for managed AI sandbox
 
 ### Phase 3: Quality & Hardening (Current)
 - [ ] Add unit tests for `shipbox-engine` internal API.
-- [ ] Set up Vitest and RTL for frontend components.
+- [x] Set up Vitest and RTL for frontend components.
 - [ ] Implement Playwright E2E "Happy Path" tests.
 - [ ] Configure CI to run all tests on PR.
 
 ### Phase 4: Production
-- [ ] Integrate usage-based billing logic.
+- [x] Integrate usage-based billing logic (Transactions & Consumption).
+- [x] Implement encrypted Box Secrets Vault.
 - [ ] Implement request rate limiting and quota management.
 - [ ] Set up error tracking (Sentry) and observability (Honeycomb/Logflare).
 - [ ] Conduct security audit and access control hardening.
