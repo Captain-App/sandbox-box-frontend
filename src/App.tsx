@@ -25,12 +25,14 @@ function App() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [sandboxes, setSandboxes] = useState<Sandbox[]>([])
   const [activeSandbox, setActiveSandbox] = useState<Sandbox | null>(null)
+  const [balance, setBalance] = useState<{ balanceCredits: number } | null>(null)
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (user) {
       fetchSandboxes()
+      fetchBalance()
       
       const url = new URL(window.location.href);
 
@@ -70,6 +72,15 @@ function App() {
       console.error('Failed to fetch sandboxes:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchBalance = async () => {
+    try {
+      const data = await api.getBalance()
+      setBalance(data)
+    } catch (error) {
+      console.error('Failed to fetch balance:', error)
     }
   }
 
@@ -133,6 +144,7 @@ function App() {
       isKilled={isKilled}
       activeSandbox={activeSandbox}
       sandboxes={sandboxes}
+      balance={balance?.balanceCredits}
       onSelectSandbox={setActiveSandbox}
       onCreateSandbox={() => setIsCreateModalOpen(true)}
     >
@@ -186,7 +198,7 @@ function App() {
                         </div>
                         <div className="flex-1 p-4 rounded-2xl bg-white/5 border border-white/5">
                           <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Active Memory</div>
-                          <div className="text-2xl font-black">{activeSandbox.memoryUsage || '0 GB'}</div>
+                          <div className="text-2xl font-black">{activeSandbox.memoryUsage || '0.1 GB'}</div>
                         </div>
                       </div>
 
@@ -228,7 +240,7 @@ function App() {
 
                   <div className="p-8 rounded-3xl border border-white/5 bg-primary/10 flex flex-col justify-center items-center text-center">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-2">Available Credits</span>
-                    <span className="text-5xl font-black tracking-tighter">£24.50</span>
+                    <span className="text-5xl font-black tracking-tighter">£{((balance?.balanceCredits || 0) / 100).toFixed(2)}</span>
                     <button 
                       onClick={() => setActiveTab('billing')}
                       className="mt-6 text-xs font-bold uppercase tracking-widest text-primary hover:underline"
@@ -300,8 +312,8 @@ function App() {
 
                         <div className="flex items-center gap-4">
                           <div className="text-right mr-4">
-                            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usage</div>
-                            <div className="text-sm font-bold text-primary">£2.10 this month</div>
+                            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</div>
+                            <div className="text-sm font-bold text-primary uppercase">{sb.status}</div>
                           </div>
                           {activeSandbox?.id === sb.id ? (
                             <div className="flex items-center gap-2">

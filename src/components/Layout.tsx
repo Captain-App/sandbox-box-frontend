@@ -15,6 +15,7 @@ interface LayoutProps {
   isKilled: boolean
   activeSandbox: Sandbox | null
   sandboxes: Sandbox[]
+  balance?: number
   onSelectSandbox: (sandbox: Sandbox) => void
   onCreateSandbox: () => void
 }
@@ -27,6 +28,7 @@ export function Layout({
   isKilled,
   activeSandbox,
   sandboxes,
+  balance,
   onSelectSandbox,
   onCreateSandbox
 }: LayoutProps) {
@@ -35,7 +37,7 @@ export function Layout({
       "flex h-screen text-foreground overflow-hidden transition-colors duration-1000",
       isKilled ? "bg-red-950/20" : "bg-background"
     )}>
-      <Sidebar activeTab={activeTab} onTabChange={onTabChange} />
+      <Sidebar activeTab={activeTab} onTabChange={onTabChange} balance={balance} />
       
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {/* Header */}

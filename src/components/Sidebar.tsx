@@ -21,9 +21,10 @@ const navItems = [
 interface SidebarProps {
   activeTab: string
   onTabChange: (id: string) => void
+  balance?: number
 }
 
-export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, balance }: SidebarProps) {
   const { signOut } = useAuth()
 
   return (
@@ -67,10 +68,10 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         <div className="p-4 rounded-2xl bg-slate-900/50 border border-white/5 space-y-3">
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             <span>Credits</span>
-            <span className="text-primary">£24.50</span>
+            <span className="text-primary">£{((balance || 0) / 100).toFixed(2)}</span>
           </div>
           <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-            <div className="h-full bg-primary w-3/4" />
+            <div className="h-full bg-primary" style={{ width: `${Math.min(100, (balance || 0) / 50)}%` }} />
           </div>
         </div>
       </div>
