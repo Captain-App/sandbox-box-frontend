@@ -45,7 +45,7 @@ jobs:
           echo "${{ secrets.STRIPE_API_KEY }}" | npx wrangler secret put STRIPE_API_KEY
           echo "${{ secrets.STRIPE_WEBHOOK_SECRET }}" | npx wrangler secret put STRIPE_WEBHOOK_SECRET
           echo "${{ secrets.HONEYCOMB_API_KEY }}" | npx wrangler secret put HONEYCOMB_API_KEY
-          npx wrangler d1 migrations apply shipbox-db --remote --yes
+          npx wrangler d1 migrations apply shipbox-db --remote
           npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
