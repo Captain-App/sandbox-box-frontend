@@ -1,11 +1,11 @@
-import { CreateSessionInput } from "@shipbox/shared";
+import { CreateSessionInput, SessionMetadata, SessionId } from "@shipbox/shared";
 import { Effect, Schema } from "effect";
 
 /**
  * Mock Fetcher for service bindings.
  */
 export function createMockSandboxMcp() {
-  const sessions = new Map<string, any>();
+  const sessions = new Map<string, SessionMetadata>();
 
   const fetch = async (input: RequestInfo, init?: RequestInit) => {
     const url = new URL(typeof input === "string" ? input : input.url);
@@ -15,7 +15,7 @@ export function createMockSandboxMcp() {
     // Mock internal sessions API
     if (path === "/internal/sessions") {
       if (method === "POST") {
-        const body = JSON.parse(init?.body as string);
+        const body = JSON.parse(init?.body as string) as CreateSessionInput & { userId: string };
         
         // Validate input against schema to catch frontend/api mismatches in tests
         const decodeResult = Effect.runSyncExit(Schema.decodeUnknown(CreateSessionInput)(body));
@@ -26,16 +26,17 @@ export function createMockSandboxMcp() {
 
         const sessionId = Math.random().toString(36).substring(2, 10);
         const now = Date.now();
-        const session = {
-          sessionId,
+        const session: SessionMetadata = {
+          sessionId: sessionId as unknown as SessionId,
           sandboxId: sessionId,
           createdAt: now,
           lastActivity: now,
           status: "active",
           workspacePath: "/workspace",
           webUiUrl: `https://engine/session/${sessionId}/`,
+          userId: body.userId,
           title: inputData.name || "Test Box",
-          repository: inputData.repository ? { url: inputData.repository, branch: "main" } : undefined,
+          repository: inputData.repository ? { url: inputData.repository as unknown as `https://github.com/${string}`, branch: "main" } : undefined,
           config: { defaultModel: "claude-3-5-sonnet" },
         };
         sessions.set(sessionId, session);
@@ -67,5 +68,5 @@ export function createMockSandboxMcp() {
   return {
     fetch,
     _sessions: sessions,
-  } as unknown as Fetcher & { _sessions: Map<string, any> };
+  } as unknown as Fetcher & { _sessions: Map<string, SessionMetadata> };
 }

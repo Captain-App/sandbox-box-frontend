@@ -26,7 +26,7 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
   const [name, setName] = useState("") // Keep name state for UI feedback (disabling button)
   const [selectedRegion, setSelectedRegion] = useState("lhr")
   const [selectedRepo, setSelectedRepo] = useState("")
-  const [githubRepos, setGithubRepos] = useState<any[]>([])
+  const [githubRepos, setGithubRepos] = useState<{ id: number; name: string; full_name: string; html_url: string }[]>([])
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [showRepoPicker, setShowRepoPicker] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -35,8 +35,12 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
 
   useEffect(() => {
     if (isOpen) {
-      setLoadingRepos(true)
-      setError(null)
+      // Use Promise.resolve() to avoid synchronous setState in effect
+      Promise.resolve().then(() => {
+        setError(null)
+        setLoadingRepos(true)
+      })
+      
       api.getGitHubRepos()
         .then(repos => setGithubRepos(repos))
         .catch(() => setGithubRepos([]))
@@ -58,8 +62,9 @@ export function CreateSandboxModal({ isOpen, onClose, onCreate }: CreateSandboxM
     setError(null);
     try {
       await onCreate(finalName, selectedRegion, finalRepo || undefined);
-    } catch (err: any) {
-      setError(err.message || 'Failed to initialise sandbox');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to initialise sandbox';
+      setError(message);
       setIsLoading(false);
     }
   };

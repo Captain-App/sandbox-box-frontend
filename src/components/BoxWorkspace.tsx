@@ -173,7 +173,6 @@ interface BoxWorkspaceProps {
 export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'preview'>('chat')
-  const [chatWidth] = useState(380)
 
   const iframeUrl = sandbox.webUiUrl
 

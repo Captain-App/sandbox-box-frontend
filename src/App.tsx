@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Layout } from './components/Layout'
 import { ActivityTimeline } from './components/ActivityTimeline'
 import { AcceptanceModal } from './components/AcceptanceModal'
@@ -58,9 +58,9 @@ function App() {
         }).catch(err => console.error("Failed to link GitHub:", err));
       }
     }
-  }, [user])
+  }, [user, fetchSandboxes])
 
-  const fetchSandboxes = async () => {
+  const fetchSandboxes = useCallback(async () => {
     try {
       setLoading(true)
       const data = await api.getSessions()
@@ -73,7 +73,7 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [activeSandbox])
 
   const fetchBalance = async () => {
     try {

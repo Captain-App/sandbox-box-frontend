@@ -33,7 +33,7 @@ export function Settings() {
       const s = await api.getSettings();
       setSettings(s);
       if (anthropicKeyRef.current) anthropicKeyRef.current.value = '';
-    } catch (err) {
+    } catch {
       alert("Failed to save API key");
     } finally {
       setSavingKey(false);
@@ -46,7 +46,7 @@ export function Settings() {
       await api.deleteAnthropicKey();
       const s = await api.getSettings();
       setSettings(s);
-    } catch (err) {
+    } catch {
       alert("Failed to delete API key");
     }
   };
@@ -66,7 +66,7 @@ export function Settings() {
     try {
       await api.disconnectGitHub();
       setGithubStatus(null);
-    } catch (err) {
+    } catch {
       alert("Failed to disconnect GitHub");
     }
   };

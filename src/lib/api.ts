@@ -118,7 +118,7 @@ export const api = {
     return res.json();
   },
 
-  async getTransactions(limit?: number): Promise<any[]> {
+  async getTransactions(limit?: number): Promise<{ id: string; amountCredits: number; type: string; createdAt: number; description: string }[]> {
     const headers = await getAuthHeaders();
     const url = new URL(`${API_BASE_URL}/billing/transactions`);
     if (limit) url.searchParams.set('limit', limit.toString());
@@ -159,7 +159,7 @@ export const api = {
     if (!res.ok) throw new Error('Failed to link GitHub');
   },
 
-  async getGitHubRepos(): Promise<any[]> {
+  async getGitHubRepos(): Promise<{ id: number; name: string; full_name: string; html_url: string }[]> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/github/repos`, { headers });
     if (!res.ok) throw new Error('Failed to fetch repositories');
@@ -203,14 +203,14 @@ export const api = {
   },
 
   // Box Secrets
-  async getBoxSecrets(): Promise<any[]> {
+  async getBoxSecrets(): Promise<{ id: string; name: string; createdAt: number }[]> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/box-secrets`, { headers });
     if (!res.ok) throw new Error('Failed to fetch box secrets');
     return res.json();
   },
 
-  async createBoxSecret(name: string, value: string): Promise<any> {
+  async createBoxSecret(name: string, value: string): Promise<{ id: string; name: string; createdAt: number }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/box-secrets`, {
       method: 'POST',

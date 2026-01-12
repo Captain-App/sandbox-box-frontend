@@ -38,14 +38,13 @@ export const githubRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
       return c.json({ error: "Invalid signature" }, 401);
     }
 
-    const data = JSON.parse(payload) as any;
+    const data = JSON.parse(payload) as { action: string; installation: { id: number; account: { login: string; type: string } } };
     const event = c.req.header("x-github-event");
 
     const requestId = c.get("requestId");
     if (event === "installation" && data.action === "created") {
       const installationId = data.installation.id;
       const accountLogin = data.installation.account.login;
-      const accountType = data.installation.account.type;
       
       // If we have state (userId), we can link automatically
       // Note: GitHub passes state back in the setup flow, but for simple install 
@@ -146,8 +145,8 @@ export const githubRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
           throw new Error(`GitHub API error ${res.status}: ${text}`);
         }
         
-        const data = yield* Effect.tryPromise(() => res.json() as Promise<any>);
-        return data.repositories.map((r: any) => ({
+        const data = yield* Effect.tryPromise(() => res.json() as Promise<{ repositories: { id: number; name: string; full_name: string; private: boolean; html_url: string; clone_url: string }[] }>);
+        return data.repositories.map((r) => ({
           id: r.id,
           name: r.name,
           full_name: r.full_name,
