@@ -65,7 +65,7 @@ describe('SecretsVault Component', () => {
 
   it('can create a new secret', async () => {
     vi.mocked(api.getBoxSecrets).mockResolvedValue([])
-    vi.mocked(api.createBoxSecret).mockResolvedValue({ id: '3', name: 'NEW_SECRET', hint: '1234' })
+    vi.mocked(api.createBoxSecret).mockResolvedValue({ id: '3', name: 'NEW_SECRET', hint: '1234', createdAt: Date.now() / 1000 })
 
     render(<SecretsVault />)
     

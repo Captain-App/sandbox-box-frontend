@@ -186,7 +186,7 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors shrink-0"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest hidden sm:inline">Back</span>
+            <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest hidden sm:inline">Back to Dashboard</span>
           </button>
           <div className="h-4 w-px bg-white/10 shrink-0" />
           <div className="flex items-center gap-2 overflow-hidden">
@@ -234,13 +234,15 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Chat Panel */}
-        <div className={cn(
-          "flex-shrink-0 transition-all duration-300 md:relative md:translate-x-0 md:opacity-100",
-          isFullscreen ? "hidden" : "w-full md:w-[380px]",
-          activeMobileTab === 'chat' ? "translate-x-0 opacity-100" : "absolute inset-0 -translate-x-full opacity-0 md:relative md:translate-x-0 md:opacity-100"
-        )}>
-          <ChatPanel sandbox={sandbox} />
-        </div>
+        {!isFullscreen && (
+          <div className={cn(
+            "flex-shrink-0 transition-all duration-300 md:relative md:translate-x-0 md:opacity-100",
+            "w-full md:w-[380px]",
+            activeMobileTab === 'chat' ? "translate-x-0 opacity-100" : "absolute inset-0 -translate-x-full opacity-0 md:relative md:translate-x-0 md:opacity-100"
+          )}>
+            <ChatPanel sandbox={sandbox} />
+          </div>
+        )}
 
         {/* Preview Frame */}
         <div className={cn(

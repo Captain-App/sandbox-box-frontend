@@ -59,8 +59,8 @@ describe('BillingDashboard Component', () => {
     
     expect(screen.getByText(/£25.00/)).toBeInTheDocument() // Balance
     expect(screen.getByText(/£12.00/)).toBeInTheDocument() // Consumption
-    expect(screen.getByText('Compute usage')).toBeInTheDocument() // Transaction
-    expect(screen.getByText(/£-5.00/)).toBeInTheDocument() // Transaction amount
+    expect(screen.getAllByText('Compute usage')[0]).toBeInTheDocument() // Transaction
+    expect(screen.getAllByText(/£-5.00/)[0]).toBeInTheDocument() // Transaction amount
   })
 
   it('handles top-up button click', async () => {

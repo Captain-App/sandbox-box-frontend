@@ -29,6 +29,21 @@ function App() {
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  const fetchSandboxes = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await api.getSessions()
+      setSandboxes(data)
+      if (data.length > 0 && !activeSandbox) {
+        setActiveSandbox(data[0])
+      }
+    } catch (error) {
+      console.error('Failed to fetch sandboxes:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [activeSandbox])
+
   useEffect(() => {
     if (user) {
       fetchSandboxes()
@@ -59,21 +74,6 @@ function App() {
       }
     }
   }, [user, fetchSandboxes])
-
-  const fetchSandboxes = useCallback(async () => {
-    try {
-      setLoading(true)
-      const data = await api.getSessions()
-      setSandboxes(data)
-      if (data.length > 0 && !activeSandbox) {
-        setActiveSandbox(data[0])
-      }
-    } catch (error) {
-      console.error('Failed to fetch sandboxes:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [activeSandbox])
 
   const fetchBalance = async () => {
     try {

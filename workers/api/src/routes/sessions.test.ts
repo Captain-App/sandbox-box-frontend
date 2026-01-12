@@ -13,6 +13,7 @@ vi.mock("@sentry/cloudflare", () => ({
   setContext: vi.fn(),
   setUser: vi.fn(),
   addBreadcrumb: vi.fn(),
+  captureException: vi.fn(),
 }));
 
 import { app } from "../index";

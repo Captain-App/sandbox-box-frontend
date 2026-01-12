@@ -1,6 +1,6 @@
 import { MiddlewareHandler } from "hono";
-import { Effect } from "effect";
-import { withRequestContext, LoggerLayer } from "@shipbox/shared";
+import { Effect, pipe } from "effect";
+import { withRequestContext, LoggerLayer, withSentry } from "@shipbox/shared";
 import * as Sentry from "@sentry/cloudflare";
 
 declare module "hono" {
@@ -19,6 +19,7 @@ export const loggingMiddleware = (): MiddlewareHandler => async (c, next) => {
   Sentry.setContext("request", {
     method: c.req.method,
     path: c.req.path,
+    url: c.req.url,
   });
 
   const start = Date.now();
@@ -26,8 +27,10 @@ export const loggingMiddleware = (): MiddlewareHandler => async (c, next) => {
 
   // Log request entry
   await Effect.runPromise(
-    Effect.log(`--> ${method} ${path}`).pipe(
+    pipe(
+      Effect.log(`--> ${method} ${path}`),
       withRequestContext(requestId),
+      withSentry(Sentry as any),
       Effect.provide(LoggerLayer)
     )
   );
@@ -36,17 +39,19 @@ export const loggingMiddleware = (): MiddlewareHandler => async (c, next) => {
 
   const duration = Date.now() - start;
   const status = c.res.status;
-  const user = c.get("user") as { id: string } | undefined;
+  const user = c.get("user") as { id: string; email: string } | undefined;
 
   if (user) {
-    Sentry.setUser({ id: user.id });
+    Sentry.setUser({ id: user.id, email: user.email });
     Sentry.setTag("userId", user.id);
   }
 
   // Log request exit with full context
   await Effect.runPromise(
-    Effect.log(`<-- ${method} ${path} ${status} (${duration}ms)`).pipe(
+    pipe(
+      Effect.log(`<-- ${method} ${path} ${status} (${duration}ms)`),
       withRequestContext(requestId, user?.id),
+      withSentry(Sentry as any),
       Effect.provide(LoggerLayer)
     )
   );

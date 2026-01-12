@@ -203,14 +203,14 @@ export const api = {
   },
 
   // Box Secrets
-  async getBoxSecrets(): Promise<{ id: string; name: string; createdAt: number }[]> {
+  async getBoxSecrets(): Promise<{ id: string; name: string; hint: string; createdAt: number; lastUsed?: number }[]> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/box-secrets`, { headers });
     if (!res.ok) throw new Error('Failed to fetch box secrets');
     return res.json();
   },
 
-  async createBoxSecret(name: string, value: string): Promise<{ id: string; name: string; createdAt: number }> {
+  async createBoxSecret(name: string, value: string): Promise<{ id: string; name: string; hint: string; createdAt: number }> {
     const headers = await getAuthHeaders();
     const res = await fetch(`${API_BASE_URL}/box-secrets`, {
       method: 'POST',

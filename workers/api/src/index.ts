@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { Effect, Exit, Cause } from "effect";
-import { withSentry } from "@sentry/cloudflare";
+import { Effect, Exit, Cause, pipe } from "effect";
+import { withSentry as sentryWrapper } from "@sentry/cloudflare";
+import * as Sentry from "@sentry/cloudflare";
 import { sessionsRoutes } from "./routes/sessions";
 import { githubRoutes } from "./routes/github";
 import { settingsRoutes } from "./routes/settings";
@@ -13,7 +14,7 @@ import { makeBillingServiceLayer, BillingService } from "./services/billing";
 import { makeQuotaServiceLayer, QuotaService } from "./services/quota";
 import { Option } from "effect";
 import { loggingMiddleware } from "./middleware/logging";
-import { LoggerLayer, withRequestContext } from "@shipbox/shared";
+import { LoggerLayer, withRequestContext, withSentry, captureEffectError } from "@shipbox/shared";
 import { instrument } from "@microlabs/otel-cf-workers";
 
 export type Bindings = {
@@ -114,17 +115,20 @@ app.post("/internal/report-usage", async (c) => {
   const requestId = c.get("requestId");
 
   const result = await Effect.runPromiseExit(
-    Effect.gen(function* () {
-      const service = yield* BillingService;
-      return yield* service.reportUsage(userId, sessionId, durationMs);
-    }).pipe(
+    pipe(
+      Effect.gen(function* () {
+        const service = yield* BillingService;
+        return yield* service.reportUsage(userId, sessionId, durationMs);
+      }),
       Effect.provide(makeBillingServiceLayer(c.env.DB)),
       withRequestContext(requestId, userId, sessionId),
+      withSentry(Sentry as any),
       Effect.provide(LoggerLayer)
     )
   );
 
   if (Exit.isFailure(result)) {
+    captureEffectError(result.cause, Sentry as any, { userId, sessionId, durationMs, route: "/internal/report-usage" });
     return c.json({ error: "Failed to report usage" }, 500);
   }
 
@@ -137,17 +141,20 @@ app.post("/internal/report-token-usage", async (c) => {
   const requestId = c.get("requestId");
 
   const result = await Effect.runPromiseExit(
-    Effect.gen(function* () {
-      const billing = yield* BillingService;
-      return yield* billing.reportTokenUsage(userId, sessionId, service, inputTokens, outputTokens, model);
-    }).pipe(
+    pipe(
+      Effect.gen(function* () {
+        const billing = yield* BillingService;
+        return yield* billing.reportTokenUsage(userId, sessionId, service, inputTokens, outputTokens, model);
+      }),
       Effect.provide(makeBillingServiceLayer(c.env.DB)),
       withRequestContext(requestId, userId, sessionId),
+      withSentry(Sentry as any),
       Effect.provide(LoggerLayer)
     )
   );
 
   if (Exit.isFailure(result)) {
+    captureEffectError(result.cause, Sentry as any, { userId, sessionId, service, model, route: "/internal/report-token-usage" });
     return c.json({ error: "Failed to report token usage" }, 500);
   }
 
@@ -163,26 +170,29 @@ app.get("/internal/user-config/:userId", async (c) => {
   const apiKeyLayer = makeApiKeyServiceLayer(c.env.DB, c.env.PROXY_JWT_SECRET);
 
   const result = await Effect.runPromiseExit(
-    Effect.gen(function* () {
-      const githubService = yield* GitHubService;
-      const apiKeyService = yield* ApiKeyService;
-      
-      const githubToken = yield* Effect.catchAll(githubService.getInstallationToken(userId), () => Effect.succeed(null));
-      const anthropicKey = yield* Effect.catchAll(apiKeyService.getApiKey(userId), () => Effect.succeed(Option.none()));
-      
-      return {
-        githubToken,
-        anthropicKey: Option.getOrNull(anthropicKey),
-      };
-    }).pipe(
+    pipe(
+      Effect.gen(function* () {
+        const githubService = yield* GitHubService;
+        const apiKeyService = yield* ApiKeyService;
+        
+        const githubToken = yield* Effect.catchAll(githubService.getInstallationToken(userId), () => Effect.succeed(null));
+        const anthropicKey = yield* Effect.catchAll(apiKeyService.getApiKey(userId), () => Effect.succeed(Option.none()));
+        
+        return {
+          githubToken,
+          anthropicKey: Option.getOrNull(anthropicKey),
+        };
+      }),
       Effect.provide(githubLayer),
       Effect.provide(apiKeyLayer),
       withRequestContext(requestId, userId),
+      withSentry(Sentry as any),
       Effect.provide(LoggerLayer)
     )
   );
 
   if (Exit.isFailure(result)) {
+    captureEffectError(result.cause, Sentry as any, { userId, route: "/internal/user-config" });
     return c.json({ error: "Internal server error" }, 500);
   }
 
@@ -203,12 +213,14 @@ app.get("/internal/check-balance/:userId", async (c) => {
   const quotaLayer = makeQuotaServiceLayer(c.env.DB);
 
   const result = await Effect.runPromiseExit(
-    Effect.gen(function* () {
-      const quota = yield* QuotaService;
-      return yield* quota.checkBalance(userId);
-    }).pipe(
+    pipe(
+      Effect.gen(function* () {
+        const quota = yield* QuotaService;
+        return yield* quota.checkBalance(userId);
+      }),
       Effect.provide(quotaLayer),
       withRequestContext(requestId, userId),
+      withSentry(Sentry as any),
       Effect.provide(LoggerLayer)
     )
   );
@@ -216,6 +228,12 @@ app.get("/internal/check-balance/:userId", async (c) => {
   if (Exit.isFailure(result)) {
     const error = Cause.failureOrCause(result.cause);
     const message = error._tag === "Left" ? error.left.message : "Balance check failed";
+    
+    // Only capture unexpected causes, not simple insufficient balance (402)
+    if (error._tag === "Right") {
+      captureEffectError(result.cause, Sentry as any, { userId, route: "/internal/check-balance" });
+    }
+
     return c.json({ error: message, ok: false }, 402); // Payment Required
   }
 
@@ -266,7 +284,7 @@ export type AppType = typeof app;
 
 // Wrap app with Sentry and OTel
 export default instrument(
-  withSentry(
+  sentryWrapper(
     (env: Bindings) => ({
       dsn: env.SENTRY_DSN,
       tracesSampleRate: 1.0,
