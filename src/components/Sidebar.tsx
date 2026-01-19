@@ -8,15 +8,16 @@ import {
   LogOut,
   X,
 } from "lucide-react";
+import { NavLink } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { useAuth } from "../contexts/AuthContext";
 
 const navItems = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "boxes", label: "Boxes", icon: Box },
-  { id: "activity", label: "Activity", icon: Terminal },
-  { id: "billing", label: "Billing", icon: CreditCard },
-  { id: "settings", label: "Settings", icon: SettingsIcon },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { id: "boxes", label: "Boxes", icon: Box, path: "/boxes" },
+  { id: "activity", label: "Activity", icon: Terminal, path: "/activity" },
+  { id: "billing", label: "Billing", icon: CreditCard, path: "/billing" },
+  { id: "settings", label: "Settings", icon: SettingsIcon, path: "/settings" },
 ];
 
 interface SidebarProps {
@@ -28,8 +29,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({
-  activeTab,
-  onTabChange,
+  activeTab: _activeTab,
+  onTabChange: _onTabChange,
   balance,
   isOpen,
   onClose,
@@ -74,22 +75,22 @@ export function Sidebar({
 
         <nav className="flex-1 px-4 space-y-2">
           {navItems.map((item) => (
-            <button
+            <NavLink
               key={item.id}
-              onClick={() => {
-                onTabChange(item.id);
-                onClose?.();
-              }}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
-                activeTab === item.id
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
-              )}
+              to={item.path}
+              onClick={onClose}
+              className={({ isActive }) =>
+                cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                )
+              }
             >
               <item.icon className="w-5 h-5" />
               {item.label}
-            </button>
+            </NavLink>
           ))}
         </nav>
 

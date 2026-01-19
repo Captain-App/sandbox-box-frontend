@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { BoxWorkspace } from "./BoxWorkspace";
 
 describe("BoxWorkspace Component", () => {
@@ -18,14 +19,22 @@ describe("BoxWorkspace Component", () => {
   });
 
   it("renders the header and back button", () => {
-    render(<BoxWorkspace sandbox={sandbox as any} onClose={onClose} />);
+    render(
+      <MemoryRouter>
+        <BoxWorkspace sandbox={sandbox as any} onClose={onClose} />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByText("Back")).toBeInTheDocument();
     expect(screen.getAllByText("Test Box").length).toBeGreaterThan(0);
   });
 
   it("renders the chat panel and iframe", () => {
-    render(<BoxWorkspace sandbox={sandbox as any} onClose={onClose} />);
+    render(
+      <MemoryRouter>
+        <BoxWorkspace sandbox={sandbox as any} onClose={onClose} />
+      </MemoryRouter>,
+    );
 
     expect(
       screen.getAllByPlaceholderText(/Ask your agent.../i)[0],
@@ -34,7 +43,11 @@ describe("BoxWorkspace Component", () => {
   });
 
   it("toggles fullscreen mode", () => {
-    render(<BoxWorkspace sandbox={sandbox as any} onClose={onClose} />);
+    render(
+      <MemoryRouter>
+        <BoxWorkspace sandbox={sandbox as any} onClose={onClose} />
+      </MemoryRouter>,
+    );
 
     const chatInput = screen.getAllByPlaceholderText(/Ask your agent.../i)[0];
     expect(chatInput).toBeInTheDocument();
@@ -47,15 +60,17 @@ describe("BoxWorkspace Component", () => {
     fireEvent.click(fullscreenButton);
 
     // Chat panel should be hidden in fullscreen (on desktop)
-    // Note: The mobile chat might still be in the DOM but hidden by CSS,
-    // but here it should be removed from DOM because it's only rendered conditionally or hidden by parent
     expect(screen.queryAllByPlaceholderText(/Ask your agent.../i).length).toBe(
       1,
     ); // Only mobile one remains?
   });
 
   it("calls onClose when back button is clicked", () => {
-    render(<BoxWorkspace sandbox={sandbox as any} onClose={onClose} />);
+    render(
+      <MemoryRouter>
+        <BoxWorkspace sandbox={sandbox as any} onClose={onClose} />
+      </MemoryRouter>,
+    );
 
     fireEvent.click(screen.getByText("Back"));
     expect(onClose).toHaveBeenCalled();

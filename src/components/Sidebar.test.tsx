@@ -1,5 +1,6 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 
 // Mock useAuth
@@ -17,7 +18,11 @@ describe("Sidebar Component", () => {
   });
 
   it("renders navigation items", () => {
-    render(<Sidebar activeTab="dashboard" onTabChange={onTabChange} />);
+    render(
+      <MemoryRouter>
+        <Sidebar activeTab="dashboard" onTabChange={onTabChange} />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Boxes")).toBeInTheDocument();
@@ -26,22 +31,34 @@ describe("Sidebar Component", () => {
     expect(screen.getByText("Settings")).toBeInTheDocument();
   });
 
-  it("calls onTabChange when a nav item is clicked", () => {
-    render(<Sidebar activeTab="dashboard" onTabChange={onTabChange} />);
+  it("navigates when a nav item is clicked", () => {
+    render(
+      <MemoryRouter>
+        <Sidebar activeTab="dashboard" onTabChange={onTabChange} />
+      </MemoryRouter>,
+    );
 
-    fireEvent.click(screen.getByText("Settings"));
-    expect(onTabChange).toHaveBeenCalledWith("settings");
+    const settingsLink = screen.getByText("Settings").closest("a");
+    expect(settingsLink).toHaveAttribute("href", "/settings");
   });
 
   it("highlights the active tab", () => {
-    render(<Sidebar activeTab="settings" onTabChange={onTabChange} />);
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Sidebar activeTab="settings" onTabChange={onTabChange} />
+      </MemoryRouter>,
+    );
 
-    const settingsButton = screen.getByText("Settings").closest("button");
-    expect(settingsButton).toHaveClass("text-primary"); // active tab styling
+    const settingsLink = screen.getByText("Settings").closest("a");
+    expect(settingsLink).toHaveClass("text-primary"); // active tab styling
   });
 
   it("renders sign out button", () => {
-    render(<Sidebar activeTab="dashboard" onTabChange={onTabChange} />);
+    render(
+      <MemoryRouter>
+        <Sidebar activeTab="dashboard" onTabChange={onTabChange} />
+      </MemoryRouter>,
+    );
     expect(screen.getByText("Sign Out")).toBeInTheDocument();
   });
 });

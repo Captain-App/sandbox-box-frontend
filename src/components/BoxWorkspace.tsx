@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Send,
-  Paperclip,
   Bot,
-  User,
   ExternalLink,
   Maximize2,
   Minimize2,
@@ -14,8 +13,9 @@ import {
   FileEdit,
   Code2,
   AlertCircle,
+  MessageSquare,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { Streamdown } from "streamdown";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/Button";
 import { api, type Sandbox } from "../lib/api";
@@ -34,7 +34,7 @@ export function AgentMonologue({
   sandbox,
   plan,
   isWorking,
-  currentRunId,
+  currentRunId: _currentRunId,
   events,
   onSend,
 }: AgentMonologueProps) {
@@ -52,6 +52,32 @@ export function AgentMonologue({
     onSend(input);
     setInput("");
   };
+
+  // Accumulate streaming text from events
+  const streamingText = useMemo(() => {
+    const textParts: string[] = [];
+    for (const event of events) {
+      if (
+        event.type === "text" ||
+        event.type === "reasoning" ||
+        event.type === "message.part.updated"
+      ) {
+        const text = event.data?.text || event.data?.content || "";
+        if (text) textParts.push(text);
+      }
+    }
+    return textParts.join("");
+  }, [events]);
+
+  // Filter non-text events for the activity feed
+  const activityEvents = useMemo(() => {
+    return events.filter(
+      (e) =>
+        e.type !== "text" &&
+        e.type !== "reasoning" &&
+        e.type !== "message.part.updated",
+    );
+  }, [events]);
 
   const renderEvent = (event: RealtimeEvent) => {
     switch (event.type) {
@@ -156,10 +182,6 @@ export function AgentMonologue({
             </div>
           </div>
         );
-      case "message.part.updated":
-        // This is for streaming text, we might want to handle it differently
-        // if we want to show partial thoughts, but for now let's just show it's talking
-        return null;
       default:
         return null;
     }
@@ -203,14 +225,29 @@ Give your agent a task below. They will maintain a live \`PLAN.md\` here while t
 
       {/* Monologue / Plan Content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 scroll-smooth">
-        <div className="prose prose-invert prose-xs max-w-none prose-headings:tracking-tight prose-headings:uppercase prose-headings:text-primary prose-a:text-primary hover:prose-a:underline prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 mb-8">
-          <ReactMarkdown>{plan || emptyPlan}</ReactMarkdown>
-        </div>
+        {/* Show plan when not actively streaming */}
+        {!streamingText && (
+          <div className="prose prose-invert prose-xs max-w-none prose-headings:tracking-tight prose-headings:uppercase prose-headings:text-primary prose-a:text-primary hover:prose-a:underline prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 mb-8">
+            <Streamdown isAnimating={false}>{plan || emptyPlan}</Streamdown>
+          </div>
+        )}
 
-        {/* Real-time Trace Events */}
-        <div className="space-y-1">{events.map(renderEvent)}</div>
+        {/* Streaming AI response */}
+        {streamingText && (
+          <div className="flex items-start gap-2 mb-4">
+            <div className="mt-1 p-1.5 rounded bg-primary/10 border border-primary/20 shrink-0">
+              <MessageSquare className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <div className="flex-1 prose prose-invert prose-xs max-w-none prose-headings:text-primary prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:rounded prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10">
+              <Streamdown isAnimating={isWorking}>{streamingText}</Streamdown>
+            </div>
+          </div>
+        )}
 
-        {isWorking && !plan && events.length === 0 && (
+        {/* Real-time Activity Events */}
+        <div className="space-y-1">{activityEvents.map(renderEvent)}</div>
+
+        {isWorking && !streamingText && activityEvents.length === 0 && (
           <div className="mt-8 flex flex-col items-center justify-center text-center space-y-4 py-12 opacity-50">
             <Sparkles className="w-8 h-8 text-primary animate-pulse" />
             <p className="text-xs font-medium">Thinking...</p>
@@ -247,7 +284,18 @@ Give your agent a task below. They will maintain a live \`PLAN.md\` here while t
   );
 }
 
-export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
+interface BoxWorkspaceProps {
+  sandbox: Sandbox | null;
+  onClose: () => void;
+}
+
+export function BoxWorkspace({
+  sandbox: initialSandbox,
+  onClose,
+}: BoxWorkspaceProps) {
+  const { sessionId: urlSessionId } = useParams<{ sessionId: string }>();
+  const navigate = useNavigate();
+  const [sandbox, setSandbox] = useState<Sandbox | null>(initialSandbox);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeRightView, setActiveRightView] = useState<"preview" | "plan">(
     "preview",
@@ -261,18 +309,30 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
   const [isWorking, setIsWorking] = useState(false);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
 
-  const sessionId = sandbox.sessionId || sandbox.id;
+  const sessionId = sandbox?.sessionId || sandbox?.id || urlSessionId;
+
+  // Fetch sandbox if not provided but we have URL sessionId
+  useEffect(() => {
+    if (!sandbox && urlSessionId) {
+      api
+        .getSession(urlSessionId)
+        .then((data) => setSandbox(data))
+        .catch(() => navigate("/"));
+    }
+  }, [sandbox, urlSessionId, navigate]);
+
   const deployedUrl = `https://engine.shipbox.dev/site/${sessionId}/`;
   const iframeUrl = deployedUrl;
 
   // WebSocket hook
   const { events, clearEvents } = useRealtime(
-    sessionId,
-    sandbox.realtimeToken || null,
+    sessionId || null,
+    sandbox?.realtimeToken || null,
   );
 
   // Initial fetch of the plan
   useEffect(() => {
+    if (!sessionId) return;
     const fetchInitialPlan = async () => {
       try {
         const result = await api.getPlan(sessionId);
@@ -284,7 +344,7 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
 
   // Poll for plan updates while working
   useEffect(() => {
-    if (!isWorking) return;
+    if (!isWorking || !sessionId) return;
     const interval = setInterval(async () => {
       try {
         const result = await api.getPlan(sessionId);
@@ -296,7 +356,7 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
 
   // Poll for run status
   useEffect(() => {
-    if (!currentRunId) return;
+    if (!currentRunId || !sessionId) return;
     const interval = setInterval(async () => {
       try {
         const result = await api.getRunStatus(sessionId, currentRunId);
@@ -315,6 +375,7 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
   }, [currentRunId, sessionId]);
 
   const handleSendTask = async (taskText: string) => {
+    if (!sessionId) return;
     setIsWorking(true);
     clearEvents();
     try {
@@ -324,6 +385,15 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
       setIsWorking(false);
     }
   };
+
+  // Show loading state while fetching sandbox
+  if (!sandbox) {
+    return (
+      <div className="fixed inset-0 z-[80] bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[80] bg-background flex flex-col">
@@ -483,10 +553,10 @@ export function BoxWorkspace({ sandbox, onClose }: BoxWorkspaceProps) {
             >
               <div className="max-w-4xl mx-auto">
                 <div className="prose prose-invert prose-sm lg:prose-base max-w-none prose-headings:tracking-tight prose-headings:uppercase prose-headings:text-primary prose-a:text-primary hover:prose-a:underline prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10">
-                  <ReactMarkdown>
+                  <Streamdown isAnimating={isWorking}>
                     {plan ||
                       "# No Plan Found\nYour agent hasn't created a plan for this session yet."}
-                  </ReactMarkdown>
+                  </Streamdown>
                 </div>
               </div>
             </div>
