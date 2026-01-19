@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "shipbox-sandbox": {
+      "type": "sse",
+      "url": "https://backend.shipbox.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer ${SUPABASE_ACCESS_TOKEN}"
+      }
+    }
+  }
+}
