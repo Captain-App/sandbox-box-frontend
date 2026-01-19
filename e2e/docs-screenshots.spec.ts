@@ -42,8 +42,7 @@ test.describe("Generate Screenshots", () => {
   test("capture settings", async ({ page }) => {
     await page.goto("/");
     await page
-      .locator("button")
-      .filter({ hasText: /Settings/i })
+      .getByRole("link", { name: /Settings/i })
       .first()
       .click();
     // Wait for the Settings page content
@@ -57,8 +56,7 @@ test.describe("Generate Screenshots", () => {
   test("capture billing", async ({ page }) => {
     await page.goto("/");
     await page
-      .locator("button")
-      .filter({ hasText: /Billing/i })
+      .getByRole("link", { name: /Billing/i })
       .first()
       .click();
     await expect(page.getByText("Balance", { exact: true })).toBeVisible({
@@ -70,7 +68,7 @@ test.describe("Generate Screenshots", () => {
 
   test("capture boxes list", async ({ page }) => {
     await page.goto("/");
-    await page.locator("button").filter({ hasText: /Boxes/i }).first().click();
+    await page.getByRole("link", { name: /Boxes/i }).first().click();
     // Check for Boxes heading in main content
     await expect(
       page.getByRole("heading", { name: /^Boxes$/ }).first(),
@@ -82,7 +80,7 @@ test.describe("Generate Screenshots", () => {
   test("capture create sandbox modal", async ({ page }) => {
     await page.goto("/");
     // Go to Boxes page
-    await page.locator("button").filter({ hasText: /Boxes/i }).first().click();
+    await page.getByRole("link", { name: /Boxes/i }).first().click();
     // Click the "Create New Box" button
     await page.getByRole("button", { name: /Create New Box/i }).click();
 

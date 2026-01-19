@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ActivityTimeline } from "./components/ActivityTimeline";
@@ -31,6 +31,15 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showAuth, setShowAuth] = useState(false);
+  const prevUserRef = useRef(user);
+
+  // When user logs out (transitions from logged in to null), show auth page instead of landing
+  useEffect(() => {
+    if (prevUserRef.current && !user) {
+      setShowAuth(true);
+    }
+    prevUserRef.current = user;
+  }, [user]);
   
   // Sync activeTab with current path
   const activeTab = useMemo(() => {

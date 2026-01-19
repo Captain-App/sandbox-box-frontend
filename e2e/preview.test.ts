@@ -41,7 +41,7 @@ test.describe("Preview Functionality", () => {
     }
 
     // Navigate to Boxes
-    await page.locator("button").filter({ hasText: /Boxes/i }).first().click();
+    await page.getByRole("link", { name: /Boxes/i }).first().click();
 
     // Open the box
     await page.getByRole("button", { name: /Open/i }).first().click();
@@ -72,7 +72,7 @@ test.describe("Preview Functionality", () => {
       await page.getByRole("button", { name: /Sign In|Get Started/i }).first().click();
     }
 
-    await page.locator("button").filter({ hasText: /Boxes/i }).first().click();
+    await page.getByRole("link", { name: /Boxes/i }).first().click();
     await page.getByRole("button", { name: /Open/i }).first().click();
 
     // Get the popup/new tab promise before clicking

@@ -154,11 +154,11 @@ export function CreateSandboxModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+        className="absolute inset-0 z-0 bg-background/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-xl p-6 md:p-8 rounded-[2.5rem] border border-white/10 bg-slate-950 shadow-2xl overflow-y-auto max-h-[90vh]">
+      <div className="relative z-10 w-full max-w-xl p-6 md:p-8 rounded-[2.5rem] border border-white/10 bg-slate-950 shadow-2xl overflow-y-auto max-h-[90vh]">
         <button
           onClick={onClose}
           className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-muted-foreground transition-colors"
@@ -201,7 +201,7 @@ export function CreateSandboxModal({
                 id="sandbox-name"
                 name="sandbox-name"
                 type="text"
-                placeholder="e.g. My New Agent"
+                placeholder="Enter box Name"
                 aria-label="Sandbox name"
                 aria-required="true"
                 value={name}

@@ -78,8 +78,7 @@ test.describe("Authenticated User", () => {
 
     // Click settings in sidebar
     await page
-      .locator("button")
-      .filter({ hasText: /Settings/i })
+      .getByRole("link", { name: /Settings/i })
       .first()
       .click();
     await expect(page.getByText(/Settings/i).first()).toBeVisible({
@@ -92,8 +91,7 @@ test.describe("Authenticated User", () => {
 
     // Click billing in sidebar
     await page
-      .locator("button")
-      .filter({ hasText: /Billing/i })
+      .getByRole("link", { name: /Billing/i })
       .first()
       .click();
     await expect(page.getByText(/Balance/i)).toBeVisible({ timeout: 10000 });
@@ -103,7 +101,7 @@ test.describe("Authenticated User", () => {
     await page.goto("/");
 
     // Click "Boxes" in sidebar to ensure we are in a state where we can see the create button
-    await page.locator("button").filter({ hasText: /Boxes/i }).first().click();
+    await page.getByRole("link", { name: /Boxes/i }).first().click();
 
     // Click "Create New Box"
     const createButton = page.getByRole("button", { name: /Create New Box/i });
@@ -112,5 +110,33 @@ test.describe("Authenticated User", () => {
 
     // Modal should appear
     await expect(page.getByText("New Sandbox Box")).toBeVisible();
+  });
+
+  test("can navigate directly to a box URL", async ({ page }) => {
+    const sessionId = "test-session-123";
+    
+    // Mock session fetch
+    await page.route(`**/sessions/${sessionId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: sessionId,
+          sessionId: sessionId,
+          title: "Direct Access Box",
+          status: "active",
+          createdAt: new Date().getTime(),
+        }),
+      });
+    });
+
+    await page.goto(`/box/${sessionId}`);
+
+    // Wait for the workspace to render
+    await page.waitForSelector('text=Direct Access Box', { timeout: 15000 });
+
+    // Should show the workspace
+    await expect(page.getByText("Direct Access Box").first()).toBeVisible();
+    await expect(page.getByPlaceholder(/Ask your agent.../i).first()).toBeVisible();
   });
 });

@@ -150,7 +150,7 @@ export function Settings() {
               id="anthropic-key"
               name="anthropic-key"
               type="password"
-              placeholder="Paste sk-ant-... key"
+              placeholder="Paste your API Key (sk-ant-...)"
               aria-label="Anthropic API key"
               className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             />

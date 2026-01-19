@@ -25,7 +25,7 @@ describe("CreateSandboxModal", () => {
 
     expect(screen.getByText(/New Sandbox Box/i)).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText(/e.g. My New Agent/i),
+      screen.getByPlaceholderText(/Enter box Name/i),
     ).toBeInTheDocument();
   });
 
@@ -41,7 +41,7 @@ describe("CreateSandboxModal", () => {
       );
     });
 
-    const nameInput = screen.getByPlaceholderText(/e.g. My New Agent/i);
+    const nameInput = screen.getByPlaceholderText(/Enter box Name/i);
     fireEvent.change(nameInput, { target: { value: "My Agent" } });
 
     const createButton = screen.getByText(/Initialise Sandbox/i);
@@ -85,7 +85,7 @@ describe("CreateSandboxModal", () => {
       );
     });
 
-    const nameInput = screen.getByPlaceholderText(/e.g. My New Agent/i);
+    const nameInput = screen.getByPlaceholderText(/Enter box Name/i);
     fireEvent.change(nameInput, { target: { value: "My Agent" } });
 
     const createButton = screen.getByText(/Initialise Sandbox/i);

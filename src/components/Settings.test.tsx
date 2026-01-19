@@ -90,7 +90,7 @@ describe("Settings Component", () => {
     );
 
     // Fix: Use more specific selector to avoid matching the button
-    const input = screen.getByPlaceholderText(/Paste sk-ant-... key/i);
+    const input = screen.getByPlaceholderText(/Paste your API Key/i);
     fireEvent.change(input, { target: { value: "sk-ant-newkey" } });
 
     // Fix: Use text content for the button
