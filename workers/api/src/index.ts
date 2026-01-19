@@ -13,6 +13,10 @@ import { GitHubService, makeGitHubServiceLayer } from "./services/github";
 import { ApiKeyService, makeApiKeyServiceLayer } from "./services/api-keys";
 import { makeBillingServiceLayer, BillingService } from "./services/billing";
 import { makeQuotaServiceLayer, QuotaService } from "./services/quota";
+import {
+  ShipboxApiKeyService,
+  makeShipboxApiKeyServiceLayer,
+} from "./services/shipbox-api-keys";
 import { Option } from "effect";
 import { loggingMiddleware } from "./middleware/logging";
 import {
@@ -90,6 +94,29 @@ const authMiddleware = async (c: any, next: any) => {
   }
 
   const token = authHeader.split(" ")[1];
+
+  // Check if it's a Shipbox API key
+  if (token.startsWith("sb_")) {
+    const result = await Effect.runPromiseExit(
+      Effect.gen(function* () {
+        const service = yield* ShipboxApiKeyService;
+        return yield* service.validateKey(token);
+      }).pipe(Effect.provide(makeShipboxApiKeyServiceLayer(c.env.DB))),
+    );
+
+    if (Exit.isSuccess(result)) {
+      c.set("user", { id: result.value, email: `user-${result.value}` });
+      await next();
+      return;
+    }
+
+    return c.json(
+      { error: "Unauthorized", details: "Invalid Shipbox API key" },
+      401,
+    );
+  }
+
+  // Otherwise validate with Supabase
   const res = await fetch(`${c.env.SUPABASE_URL}/auth/v1/user`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -98,7 +125,7 @@ const authMiddleware = async (c: any, next: any) => {
   });
 
   if (!res.ok) {
-    return c.json({ error: "Unauthorized" }, 401);
+    return c.json({ error: "Unauthorized", details: "Invalid Supabase token" }, 401);
   }
 
   const user = (await res.json()) as { id: string; email: string };
