@@ -17,8 +17,14 @@ export function useRealtime(sessionId: string | null, token: string | null) {
   const reconnectTimeoutRef = useRef<number | null>(null);
 
   const connect = useCallback(() => {
-    if (!sessionId || !token) return;
-    if (socketRef.current?.readyState === WebSocket.OPEN) return;
+    if (!sessionId || !token) {
+      console.log("[Realtime] Missing sessionId or token", { sessionId: !!sessionId, token: !!token });
+      return;
+    }
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      console.log("[Realtime] WebSocket already open");
+      return;
+    }
 
     // Use engine URL for WebSockets
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -27,11 +33,12 @@ export function useRealtime(sessionId: string | null, token: string | null) {
       lastSeq >= 0 ? `&lastSeq=${lastSeq}` : ""
     }`;
 
+    console.log("[Realtime] Connecting to WebSocket", { url: url.replace(token, "***"), sessionId });
     const ws = new WebSocket(url);
     socketRef.current = ws;
 
     ws.onopen = () => {
-      console.log("WebSocket connected");
+      console.log("[Realtime] ✅ WebSocket connected successfully", { sessionId });
       setIsConnected(true);
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
@@ -42,6 +49,7 @@ export function useRealtime(sessionId: string | null, token: string | null) {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as RealtimeEvent;
+        console.log("[Realtime] 📨 Received event", { type: data.type, seq: data.seq, data: data.data });
         if (data.type === "ping") {
           ws.send("pong");
           return;
@@ -50,21 +58,23 @@ export function useRealtime(sessionId: string | null, token: string | null) {
           // Avoid duplicates on replay
           if (prev.some((e) => e.seq === data.seq)) return prev;
           const next = [...prev, data].sort((a, b) => a.seq - b.seq);
+          console.log("[Realtime] Updated events, total count:", next.length);
           return next;
         });
         setLastSeq(data.seq);
       } catch (e) {
-        console.error("Failed to parse WebSocket message:", e);
+        console.error("[Realtime] ❌ Failed to parse WebSocket message:", e, event.data);
       }
     };
 
-    ws.onclose = () => {
-      console.log("WebSocket disconnected");
+    ws.onclose = (event) => {
+      console.log("[Realtime] ⚠️  WebSocket disconnected", { code: event.code, reason: event.reason, wasClean: event.wasClean });
       setIsConnected(false);
       socketRef.current = null;
 
       // Attempt reconnect after 3 seconds
       if (!reconnectTimeoutRef.current) {
+        console.log("[Realtime] Scheduling reconnect in 3s");
         reconnectTimeoutRef.current = window.setTimeout(() => {
           connect();
         }, 3000);
@@ -72,7 +82,7 @@ export function useRealtime(sessionId: string | null, token: string | null) {
     };
 
     ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+      console.error("[Realtime] ❌ WebSocket error:", error);
       ws.close();
     };
   }, [sessionId, lastSeq, token]);

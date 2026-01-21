@@ -311,15 +311,24 @@ export function BoxWorkspace({
 
   const sessionId = sandbox?.sessionId || sandbox?.id || urlSessionId;
 
-  // Fetch sandbox if not provided but we have URL sessionId
+  // Always fetch fresh session data to get a fresh realtimeToken
+  // The realtimeToken expires after 2h, so we need to refetch
   useEffect(() => {
-    if (!sandbox && urlSessionId) {
+    const fetchId = sessionId || urlSessionId;
+    if (fetchId) {
+      console.log('[BoxWorkspace] Fetching fresh session data for:', fetchId);
       api
-        .getSession(urlSessionId)
-        .then((data) => setSandbox(data))
-        .catch(() => navigate("/"));
+        .getSession(fetchId)
+        .then((data) => {
+          console.log('[BoxWorkspace] Got fresh session data, hasRealtimeToken:', !!data.realtimeToken);
+          setSandbox(data);
+        })
+        .catch((err) => {
+          console.error('[BoxWorkspace] Failed to fetch session:', err);
+          navigate("/");
+        });
     }
-  }, [sandbox, urlSessionId, navigate]);
+  }, [sessionId, urlSessionId, navigate]);
 
   const deployedUrl = `https://engine.shipbox.dev/site/${sessionId}/`;
   const iframeUrl = deployedUrl;
@@ -329,6 +338,16 @@ export function BoxWorkspace({
     sessionId || null,
     sandbox?.realtimeToken || null,
   );
+
+  // Debug logging
+  useEffect(() => {
+    console.log("[BoxWorkspace] Sandbox data", {
+      sessionId: sandbox?.sessionId,
+      hasRealtimeToken: !!sandbox?.realtimeToken,
+      realtimeTokenPreview: sandbox?.realtimeToken?.slice(0, 20) + "...",
+      eventsCount: events.length,
+    });
+  }, [sandbox, events]);
 
   // Initial fetch of the plan
   useEffect(() => {
