@@ -14,12 +14,14 @@ import {
   Code2,
   AlertCircle,
   MessageSquare,
+  Bug,
 } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/Button";
 import { api, type Sandbox } from "../lib/api";
 import { useRealtime, type RealtimeEvent } from "../lib/realtime";
+import * as Sentry from "@sentry/react";
 
 interface AgentMonologueProps {
   sandbox: Sandbox;
@@ -308,6 +310,7 @@ export function BoxWorkspace({
   const [plan, setPlan] = useState<string>("");
   const [isWorking, setIsWorking] = useState(false);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   const sessionId = sandbox?.sessionId || sandbox?.id || urlSessionId;
 
@@ -316,16 +319,39 @@ export function BoxWorkspace({
   useEffect(() => {
     if (!urlSessionId) return;
 
+    Sentry.addBreadcrumb({
+      category: "boxworkspace",
+      message: "Fetching session data",
+      data: { urlSessionId },
+      level: "info",
+    });
+
     // Always fetch fresh session data to ensure we have a valid realtimeToken
     console.log('[BoxWorkspace] Fetching session data for:', urlSessionId);
     api
       .getSession(urlSessionId)
       .then((data) => {
         console.log('[BoxWorkspace] Got session data, hasRealtimeToken:', !!data.realtimeToken);
+        Sentry.addBreadcrumb({
+          category: "boxworkspace",
+          message: "Session data fetched successfully",
+          data: {
+            sessionId: data.sessionId,
+            hasRealtimeToken: !!data.realtimeToken,
+            status: data.status,
+          },
+          level: "info",
+        });
         setSandbox(data);
       })
       .catch((err) => {
         console.error('[BoxWorkspace] Failed to fetch session:', err);
+        Sentry.captureException(err, {
+          tags: { component: "BoxWorkspace", action: "fetchSession" },
+          contexts: {
+            session: { urlSessionId, hasInitialSandbox: !!initialSandbox },
+          },
+        });
         // If fetch fails and we don't have any sandbox data, navigate away
         if (!initialSandbox) {
           navigate("/");
@@ -398,13 +424,46 @@ export function BoxWorkspace({
   }, [currentRunId, sessionId]);
 
   const handleSendTask = async (taskText: string) => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      const error = new Error("Cannot send task: sessionId is undefined");
+      Sentry.captureException(error, {
+        tags: { component: "BoxWorkspace", action: "sendTask" },
+        contexts: {
+          state: {
+            hasSandbox: !!sandbox,
+            hasUrlSessionId: !!urlSessionId,
+            taskText: taskText.slice(0, 50),
+          },
+        },
+      });
+      return;
+    }
+
+    Sentry.addBreadcrumb({
+      category: "boxworkspace",
+      message: "Sending task",
+      data: { sessionId, taskPreview: taskText.slice(0, 50) },
+      level: "info",
+    });
+
     setIsWorking(true);
     clearEvents();
     try {
       const result = await api.sendTask(sessionId, taskText);
+      Sentry.addBreadcrumb({
+        category: "boxworkspace",
+        message: "Task sent successfully",
+        data: { sessionId, runId: result.runId },
+        level: "info",
+      });
       setCurrentRunId(result.runId);
     } catch (e) {
+      Sentry.captureException(e, {
+        tags: { component: "BoxWorkspace", action: "sendTask" },
+        contexts: {
+          task: { sessionId, taskPreview: taskText.slice(0, 50) },
+        },
+      });
       setIsWorking(false);
     }
   };
@@ -622,6 +681,109 @@ export function BoxWorkspace({
           )}
         </div>
       </div>
+
+      {/* Debug Overlay */}
+      <button
+        onClick={() => setShowDebug(!showDebug)}
+        className="fixed bottom-4 right-4 z-50 p-2 rounded-full bg-purple-600 hover:bg-purple-700 shadow-lg transition-colors"
+        title="Toggle Debug Info"
+      >
+        <Bug className="w-5 h-5 text-white" />
+      </button>
+
+      {showDebug && (
+        <div className="fixed bottom-16 right-4 z-50 w-80 max-h-96 overflow-y-auto bg-slate-900 border border-purple-500 rounded-lg shadow-2xl p-4 text-xs font-mono">
+          <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
+            <h3 className="font-bold text-purple-400 uppercase tracking-wide">
+              Debug Info
+            </h3>
+            <button
+              onClick={() => setShowDebug(false)}
+              className="text-white/60 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            <div>
+              <div className="text-purple-400 font-bold">Session ID:</div>
+              <div className="text-white/80 break-all">
+                {sessionId || "undefined"}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-purple-400 font-bold">URL Session ID:</div>
+              <div className="text-white/80 break-all">
+                {urlSessionId || "undefined"}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-purple-400 font-bold">Sandbox Status:</div>
+              <div className="text-white/80">
+                {sandbox?.status || "no sandbox"}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-purple-400 font-bold">Realtime Token:</div>
+              <div className={cn(
+                "font-bold",
+                sandbox?.realtimeToken ? "text-green-400" : "text-red-400"
+              )}>
+                {sandbox?.realtimeToken ? "✓ Present" : "✗ Missing"}
+              </div>
+              {sandbox?.realtimeToken && (
+                <div className="text-white/60 text-[10px] break-all mt-1">
+                  {sandbox.realtimeToken.slice(0, 30)}...
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="text-purple-400 font-bold">Is Working:</div>
+              <div className={cn(
+                "font-bold",
+                isWorking ? "text-yellow-400" : "text-white/60"
+              )}>
+                {isWorking ? "YES" : "NO"}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-purple-400 font-bold">Current Run ID:</div>
+              <div className="text-white/80 break-all">
+                {currentRunId || "none"}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-purple-400 font-bold">Events Received:</div>
+              <div className="text-white/80">{events.length}</div>
+            </div>
+
+            {events.length > 0 && (
+              <div>
+                <div className="text-purple-400 font-bold">Latest Event:</div>
+                <div className="text-white/80 text-[10px] break-all">
+                  {events[events.length - 1].type}
+                </div>
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-white/10">
+              <div className="text-purple-400 font-bold mb-1">
+                Check Sentry for detailed logs
+              </div>
+              <div className="text-white/60 text-[10px]">
+                All actions are tracked in Sentry with breadcrumbs
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 // src/lib/realtime.ts
 import { useState, useEffect, useRef, useCallback } from "react";
+import * as Sentry from "@sentry/react";
 
 export interface RealtimeEvent {
   seq: number;
@@ -19,6 +20,12 @@ export function useRealtime(sessionId: string | null, token: string | null) {
   const connect = useCallback(() => {
     if (!sessionId || !token) {
       console.log("[Realtime] Missing sessionId or token", { sessionId: !!sessionId, token: !!token });
+      Sentry.addBreadcrumb({
+        category: "realtime",
+        message: "Cannot connect: missing sessionId or token",
+        data: { hasSessionId: !!sessionId, hasToken: !!token },
+        level: "warning",
+      });
       return;
     }
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -34,11 +41,23 @@ export function useRealtime(sessionId: string | null, token: string | null) {
     }`;
 
     console.log("[Realtime] Connecting to WebSocket", { url: url.replace(token, "***"), sessionId });
+    Sentry.addBreadcrumb({
+      category: "realtime",
+      message: "Initiating WebSocket connection",
+      data: { sessionId, lastSeq },
+      level: "info",
+    });
     const ws = new WebSocket(url);
     socketRef.current = ws;
 
     ws.onopen = () => {
       console.log("[Realtime] ✅ WebSocket connected successfully", { sessionId });
+      Sentry.addBreadcrumb({
+        category: "realtime",
+        message: "WebSocket connected successfully",
+        data: { sessionId },
+        level: "info",
+      });
       setIsConnected(true);
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
@@ -83,6 +102,16 @@ export function useRealtime(sessionId: string | null, token: string | null) {
 
     ws.onerror = (error) => {
       console.error("[Realtime] ❌ WebSocket error:", error);
+      Sentry.captureException(new Error("WebSocket connection error"), {
+        tags: { component: "realtime", action: "websocket" },
+        contexts: {
+          websocket: {
+            sessionId,
+            url: `wss://engine.shipbox.dev/realtime`,
+            readyState: ws.readyState,
+          },
+        },
+      });
       ws.close();
     };
   }, [sessionId, lastSeq, token]);
