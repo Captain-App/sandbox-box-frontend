@@ -311,7 +311,8 @@ export function BoxWorkspace({
 
   const sessionId = sandbox?.sessionId || sandbox?.id || urlSessionId;
 
-  // Fetch sandbox if not provided OR if we need a fresh realtimeToken  // Only use urlSessionId in dependencies to avoid infinite loops
+  // Fetch sandbox if not provided OR if we need a fresh realtimeToken
+  // Only use urlSessionId in dependencies to avoid infinite loops
   useEffect(() => {
     if (!urlSessionId) return;
 
@@ -325,7 +326,8 @@ export function BoxWorkspace({
       })
       .catch((err) => {
         console.error('[BoxWorkspace] Failed to fetch session:', err);
-        // If fetch fails and we don't have any sandbox data, navigate away        if (!initialSandbox) {
+        // If fetch fails and we don't have any sandbox data, navigate away
+        if (!initialSandbox) {
           navigate("/");
         }
         // Otherwise keep using the initial sandbox prop (might have stale token but better than nothing)
