@@ -111,4 +111,10 @@ export class ShipboxApi {
   }> {
     return this.request(`/sessions/${sessionId}/runs/${runId}`);
   }
+
+  async restartSession(id: string): Promise<{ success: boolean; status: string }> {
+    return this.request(`/sessions/${id}/start`, {
+      method: "POST",
+    });
+  }
 }
